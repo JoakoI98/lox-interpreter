@@ -2,6 +2,8 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 
+mod Token;
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
@@ -23,7 +25,10 @@ fn main() {
             });
 
             if !file_contents.is_empty() {
-                panic!("Scanner not implemented");
+                let tokens = Token::scan_tokens(file_contents.as_str());
+                for token in tokens {
+                    println!("{}", token);
+                }
             } else {
                 println!("EOF  null"); // Placeholder, replace this line when implementing the scanner
             }
