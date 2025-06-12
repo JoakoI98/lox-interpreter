@@ -275,7 +275,7 @@ pub fn scan_tokens(file_content: &str) -> Vec<Token> {
 
     tokens.push(Token {
         token_type: TokenType::SingleCharToken(SingleCharToken::Eof),
-        lexeme: "\0".to_string(),
+        lexeme: "".to_string(),
         line,
         column_start: 0,
         column_end: 0,
