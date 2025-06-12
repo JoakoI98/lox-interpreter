@@ -10,7 +10,17 @@ pub enum TwoCharToken {
 
 impl TwoCharToken {
     pub fn from_str(str: &str) -> Option<TwoCharToken> {
-        None
+        if str.len() != 2 {
+            return None;
+        }
+
+        match str {
+            "!=" => Some(TwoCharToken::BangEqual),
+            "==" => Some(TwoCharToken::EqualEqual),
+            ">=" => Some(TwoCharToken::GreaterEqual),
+            "<=" => Some(TwoCharToken::LessEqual),
+            _ => None,
+        }
     }
 }
 
