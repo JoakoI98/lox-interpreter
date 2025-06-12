@@ -3,28 +3,33 @@ use thiserror::Error;
 
 use crate::Token::{single_char_token::SingleCharToken, token::Token, token_type::TokenType};
 
-fn skip_single_line_comment(str: &str) -> (usize, usize) {
+fn skip_single_line_comment(str: &str) -> (usize, usize, usize) {
     let mut byte_idx = 0;
     let mut char_idx = 0;
 
     while let Some(c) = str.chars().nth(char_idx) {
         char_idx += 1;
         byte_idx += c.len_utf8();
-        if c == '\n' {
+        if c == LINE_SEPARATOR {
             break;
         }
     }
 
-    return (byte_idx, char_idx);
+    return (byte_idx, char_idx, 1);
 }
 
-fn skip_multi_line_comment(str: &str) -> (usize, usize) {
+fn skip_multi_line_comment(str: &str) -> (usize, usize, usize) {
     let mut byte_idx = 0;
     let mut char_idx = 0;
+    let mut comment_lines_count = 0;
 
     while let Some(c) = str.chars().nth(char_idx) {
         char_idx += 1;
         byte_idx += c.len_utf8();
+
+        if c == LINE_SEPARATOR {
+            comment_lines_count += 1;
+        }
 
         if c == '/' {
             if let Some(c2) = str.chars().nth(char_idx - 2) {
@@ -35,10 +40,10 @@ fn skip_multi_line_comment(str: &str) -> (usize, usize) {
         }
     }
 
-    return (byte_idx, char_idx);
+    return (byte_idx, char_idx, comment_lines_count);
 }
 
-fn skip_comment(str: &str) -> Option<(usize, usize)> {
+fn skip_comment(str: &str) -> Option<(usize, usize, usize)> {
     let first_two_chars = str.chars().take(2).collect::<String>();
 
     match first_two_chars.as_str() {
@@ -78,9 +83,12 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
         }
 
         if !inside_lexeme {
-            if let Some((byte_idx, char_idx)) = skip_comment(&file_content[current_byte_idx..]) {
+            if let Some((byte_idx, char_idx, line_count)) =
+                skip_comment(&file_content[current_byte_idx..])
+            {
                 current_byte_idx += byte_idx;
                 char_index += char_idx;
+                line += line_count;
                 continue;
             }
 
