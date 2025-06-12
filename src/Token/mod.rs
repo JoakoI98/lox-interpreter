@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display};
 
 #[derive(Debug)]
 pub enum SingleCharToken {
@@ -221,16 +221,8 @@ impl Token {
     }
 }
 
-// static LEXEME_SEPARATORS: &[char] = &[' ', '\t', '\r', '\n'];
+static ALLOWED_NON_TOKEN_CHARS: [char; 4] = [' ', '\t', '\r', '\n'];
 const LINE_SEPARATOR: char = '\n';
-
-// fn is_lexeme_separator(c: char) -> bool {
-//     LEXEME_SEPARATORS.contains(&c)
-// }
-
-// fn is_digit(c: char) -> bool {
-//     c.is_digit(10)
-// }
 
 pub fn scan_tokens(file_content: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
@@ -240,8 +232,9 @@ pub fn scan_tokens(file_content: &str) -> Vec<Token> {
     let mut current_lexeme_start_byte_idx: usize = 0;
     let mut inside_lexeme = false;
     let mut last_token: Option<Token> = None;
+    let mut non_token_chars_set: HashSet<char> = ALLOWED_NON_TOKEN_CHARS.into_iter().collect();
 
-    while (current_byte_idx < file_content.len()) {
+    while current_byte_idx < file_content.len() {
         let c = file_content.chars().nth(current_byte_idx).unwrap();
 
         if c == LINE_SEPARATOR && !inside_lexeme {
@@ -264,6 +257,9 @@ pub fn scan_tokens(file_content: &str) -> Vec<Token> {
             tokens.push(token);
             inside_lexeme = false;
         } else {
+            if !non_token_chars_set.contains(&c) {
+                eprintln!("[line {}] Error: Unexpected character: {}", line, c);
+            }
             current_byte_idx += c.len_utf8();
             inside_lexeme = false;
         }
