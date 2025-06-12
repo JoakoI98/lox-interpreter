@@ -3,6 +3,51 @@ use thiserror::Error;
 
 use crate::Token::{single_char_token::SingleCharToken, token::Token, token_type::TokenType};
 
+fn skip_single_line_comment(str: &str) -> (usize, usize) {
+    let mut byte_idx = 0;
+    let mut char_idx = 0;
+
+    while let Some(c) = str.chars().nth(char_idx) {
+        char_idx += 1;
+        byte_idx += c.len_utf8();
+        if c == '\n' {
+            break;
+        }
+    }
+
+    return (byte_idx, char_idx);
+}
+
+fn skip_multi_line_comment(str: &str) -> (usize, usize) {
+    let mut byte_idx = 0;
+    let mut char_idx = 0;
+
+    while let Some(c) = str.chars().nth(char_idx) {
+        char_idx += 1;
+        byte_idx += c.len_utf8();
+
+        if c == '/' {
+            if let Some(c2) = str.chars().nth(char_idx - 2) {
+                if c2 == '*' {
+                    break;
+                }
+            }
+        }
+    }
+
+    return (byte_idx, char_idx);
+}
+
+fn skip_comment(str: &str) -> Option<(usize, usize)> {
+    let first_two_chars = str.chars().take(2).collect::<String>();
+
+    match first_two_chars.as_str() {
+        "//" => Some(skip_single_line_comment(str)),
+        "/*" => Some(skip_multi_line_comment(str)),
+        _ => None,
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum ScannerError {
     #[error("[line {1}] Error: Unexpected character: {0}")]
@@ -22,9 +67,10 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
     let mut inside_lexeme = false;
     let mut last_token: Option<Token> = None;
     let mut non_token_chars_set: HashSet<char> = ALLOWED_NON_TOKEN_CHARS.into_iter().collect();
+    let mut char_index = 0;
 
     while current_byte_idx < file_content.len() {
-        let c = file_content.chars().nth(current_byte_idx).unwrap();
+        let c = file_content.chars().nth(char_index).unwrap();
 
         if c == LINE_SEPARATOR && !inside_lexeme {
             line += 1;
@@ -32,15 +78,23 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
         }
 
         if !inside_lexeme {
-            current_lexeme_start_byte_idx = current_byte_idx;
+            if let Some((byte_idx, char_idx)) = skip_comment(&file_content[current_byte_idx..]) {
+                current_byte_idx += byte_idx;
+                char_index += char_idx;
+                continue;
+            }
+
             inside_lexeme = true;
+            current_lexeme_start_byte_idx = current_byte_idx;
         }
 
-        let current_lexeme = &file_content[current_lexeme_start_byte_idx..current_byte_idx + 1];
+        let current_lexeme =
+            &file_content[current_lexeme_start_byte_idx..current_byte_idx + c.len_utf8()];
 
         if let Some(token) = Token::from_str(current_lexeme, line, current_lexeme_start_byte_idx) {
             last_token = Some(token);
             current_byte_idx += c.len_utf8();
+            char_index += 1;
         } else if let Some(token) = last_token {
             last_token = None;
             tokens.push(token);
@@ -50,6 +104,7 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
                 errors.push(ScannerError::UnexpectedCharacter(c, line));
             }
             current_byte_idx += c.len_utf8();
+            char_index += 1;
             inside_lexeme = false;
         }
     }
