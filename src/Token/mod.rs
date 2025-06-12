@@ -200,13 +200,7 @@ impl Display for Token {
             _ => "null".to_string(),
         };
 
-        let mut lexeme = format!("\"{}\"", self.lexeme);
-
-        if let TokenType::SingleCharToken(SingleCharToken::Eof) = &self.token_type {
-            lexeme = "".to_string();
-        }
-
-        write!(f, "{} {} {}", self.token_type, lexeme, literal_value)
+        write!(f, "{} {} {}", self.token_type, self.lexeme, literal_value)
     }
 }
 
