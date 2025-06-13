@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
-use crate::Token::two_char_token::TwoCharToken;
-
 use super::{
-    literal_token::LiteralToken, single_char_token::SingleCharToken, token_type::TokenType,
+    keyword_token::KeywordToken, literal_token::LiteralToken, single_char_token::SingleCharToken,
+    token_type::TokenType, two_char_token::TwoCharToken,
 };
 
 #[derive(Debug)]
@@ -48,6 +47,16 @@ impl Token {
         if let Some(two_char_token) = TwoCharToken::from_str(str) {
             return Some(Token {
                 token_type: TokenType::TwoCharToken(two_char_token),
+                lexeme: str.to_string(),
+                line,
+                column_start,
+                column_end: column_start + str.len(),
+            });
+        }
+
+        if let Some(keyword_token) = KeywordToken::from_str(str) {
+            return Some(Token {
+                token_type: TokenType::KeywordToken(keyword_token),
                 lexeme: str.to_string(),
                 line,
                 column_start,

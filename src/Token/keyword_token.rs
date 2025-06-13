@@ -13,6 +13,7 @@ pub enum KeywordToken {
     Or,
     Return,
     Super,
+    Print,
     This,
     True,
     Var,
@@ -21,7 +22,25 @@ pub enum KeywordToken {
 
 impl KeywordToken {
     pub fn from_str(str: &str) -> Option<KeywordToken> {
-        None
+        match str {
+            "and" => Some(KeywordToken::And),
+            "class" => Some(KeywordToken::Class),
+            "else" => Some(KeywordToken::Else),
+            "false" => Some(KeywordToken::False),
+            "fun" => Some(KeywordToken::Fun),
+            "for" => Some(KeywordToken::For),
+            "if" => Some(KeywordToken::If),
+            "nil" => Some(KeywordToken::Nil),
+            "or" => Some(KeywordToken::Or),
+            "return" => Some(KeywordToken::Return),
+            "super" => Some(KeywordToken::Super),
+            "print" => Some(KeywordToken::Print),
+            "this" => Some(KeywordToken::This),
+            "true" => Some(KeywordToken::True),
+            "var" => Some(KeywordToken::Var),
+            "while" => Some(KeywordToken::While),
+            _ => None,
+        }
     }
 }
 
@@ -39,6 +58,7 @@ impl Display for KeywordToken {
             KeywordToken::Or => write!(f, "OR"),
             KeywordToken::Return => write!(f, "RETURN"),
             KeywordToken::Super => write!(f, "SUPER"),
+            KeywordToken::Print => write!(f, "PRINT"),
             KeywordToken::This => write!(f, "THIS"),
             KeywordToken::True => write!(f, "TRUE"),
             KeywordToken::Var => write!(f, "VAR"),
