@@ -63,7 +63,7 @@ impl Token {
         return None;
     }
 
-    pub fn arrange_token(token: Token) -> Result<Vec<Token>, ()> {
+    pub fn arrange_token(token: Token) -> Result<Vec<Token>, super::scanner::ScannerError> {
         match &token.token_type {
             TokenType::LiteralToken(_) => LiteralToken::arrange_token(token),
             _ => Ok(vec![token]),

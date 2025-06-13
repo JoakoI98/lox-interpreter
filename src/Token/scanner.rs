@@ -57,6 +57,9 @@ fn skip_comment(str: &str) -> Option<(usize, usize, usize)> {
 pub enum ScannerError {
     #[error("[line {1}] Error: Unexpected character: {0}")]
     UnexpectedCharacter(char, usize),
+
+    #[error("[line {0}] Error: Unterminated string.")]
+    NotTerminatedString(usize),
 }
 
 static ALLOWED_NON_TOKEN_CHARS: [char; 4] = [' ', '\t', '\r', '\n'];
@@ -107,10 +110,13 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
         } else if let Some(token) = last_token {
             last_token = None;
             let safe_tokens = Token::arrange_token(token);
-            if let Ok(safe_tokens) = safe_tokens {
-                tokens.extend(safe_tokens);
-            } else {
-                errors.push(ScannerError::UnexpectedCharacter(c, line));
+            match safe_tokens {
+                Ok(safe_tokens) => {
+                    tokens.extend(safe_tokens);
+                }
+                Err(error) => {
+                    errors.push(error);
+                }
             }
             inside_lexeme = false;
         } else {
@@ -125,10 +131,13 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
 
     if let Some(token) = last_token {
         let safe_tokens = Token::arrange_token(token);
-        if let Ok(safe_tokens) = safe_tokens {
-            tokens.extend(safe_tokens);
-        } else {
-            errors.push(ScannerError::UnexpectedCharacter(c, line));
+        match safe_tokens {
+            Ok(safe_tokens) => {
+                tokens.extend(safe_tokens);
+            }
+            Err(error) => {
+                errors.push(error);
+            }
         }
     }
 

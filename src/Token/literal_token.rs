@@ -82,7 +82,9 @@ impl LiteralToken {
         return tokens;
     }
 
-    pub fn arrange_token(token: super::token::Token) -> Result<Vec<super::token::Token>, ()> {
+    pub fn arrange_token(
+        token: super::token::Token,
+    ) -> Result<Vec<super::token::Token>, super::scanner::ScannerError> {
         match &token.token_type {
             super::token_type::TokenType::LiteralToken(LiteralToken::Number(_)) => {
                 Ok(Self::arrange_number(token))
@@ -91,7 +93,9 @@ impl LiteralToken {
                 if Self::is_valid_string(token.lexeme.clone().as_str()) {
                     Ok(vec![token])
                 } else {
-                    Err(())
+                    Err(super::scanner::ScannerError::NotTerminatedString(
+                        token.line,
+                    ))
                 }
             }
             _ => Ok(vec![token]),
