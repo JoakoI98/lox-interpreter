@@ -71,11 +71,12 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
     let mut current_lexeme_start_byte_idx: usize = 0;
     let mut inside_lexeme = false;
     let mut last_token: Option<Token> = None;
-    let mut non_token_chars_set: HashSet<char> = ALLOWED_NON_TOKEN_CHARS.into_iter().collect();
+    let non_token_chars_set: HashSet<char> = ALLOWED_NON_TOKEN_CHARS.into_iter().collect();
     let mut char_index = 0;
+    let mut c: char = '\0';
 
     while current_byte_idx < file_content.len() {
-        let c = file_content.chars().nth(char_index).unwrap();
+        c = file_content.chars().nth(char_index).unwrap();
 
         if c == LINE_SEPARATOR && !inside_lexeme {
             line += 1;
@@ -105,7 +106,12 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
             char_index += 1;
         } else if let Some(token) = last_token {
             last_token = None;
-            tokens.push(token);
+            let safe_tokens = Token::arrange_token(token);
+            if let Ok(safe_tokens) = safe_tokens {
+                tokens.extend(safe_tokens);
+            } else {
+                errors.push(ScannerError::UnexpectedCharacter(c, line));
+            }
             inside_lexeme = false;
         } else {
             if !non_token_chars_set.contains(&c) {
@@ -118,7 +124,12 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
     }
 
     if let Some(token) = last_token {
-        tokens.push(token);
+        let safe_tokens = Token::arrange_token(token);
+        if let Ok(safe_tokens) = safe_tokens {
+            tokens.extend(safe_tokens);
+        } else {
+            errors.push(ScannerError::UnexpectedCharacter(c, line));
+        }
     }
 
     tokens.push(Token {

@@ -50,6 +50,23 @@ impl Token {
             });
         }
 
+        if let Some(literal_token) = LiteralToken::from_str(str) {
+            return Some(Token {
+                token_type: TokenType::LiteralToken(literal_token),
+                lexeme: str.to_string(),
+                line,
+                column_start,
+                column_end: column_start + str.len(),
+            });
+        }
+
         return None;
+    }
+
+    pub fn arrange_token(token: Token) -> Result<Vec<Token>, ()> {
+        match &token.token_type {
+            TokenType::LiteralToken(_) => LiteralToken::arrange_token(token),
+            _ => Ok(vec![token]),
+        }
     }
 }
