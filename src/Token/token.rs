@@ -23,7 +23,12 @@ impl Display for Token {
             _ => "null".to_string(),
         };
 
-        write!(f, "{} {} {}", self.token_type, self.lexeme, literal_value)
+        match &self.token_type {
+            TokenType::LiteralToken(LiteralToken::Number(n)) => {
+                write!(f, "{} {} {:?}", self.token_type, self.lexeme, n)
+            }
+            _ => write!(f, "{} {} {}", self.token_type, self.lexeme, literal_value),
+        }
     }
 }
 
