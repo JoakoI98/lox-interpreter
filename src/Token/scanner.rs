@@ -62,6 +62,12 @@ pub enum ScannerError {
     NotTerminatedString(usize),
 }
 
+#[derive(Error, Debug)]
+pub enum TokenErrors {
+    #[error("Error: Unterminated string.")]
+    NotTerminatedString,
+}
+
 static ALLOWED_NON_TOKEN_CHARS: [char; 4] = [' ', '\t', '\r', '\n'];
 const LINE_SEPARATOR: char = '\n';
 

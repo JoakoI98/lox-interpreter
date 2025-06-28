@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::Token::token_type::TokenType;
+
 #[derive(Debug)]
 pub enum SingleCharToken {
     LeftParen,
@@ -71,3 +73,5 @@ impl Display for SingleCharToken {
         }
     }
 }
+
+impl TokenType for SingleCharToken {}

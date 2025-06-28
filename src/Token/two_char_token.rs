@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::Token::token_type::TokenType;
+
 #[derive(Debug)]
 pub enum TwoCharToken {
     BangEqual,
@@ -34,3 +36,5 @@ impl Display for TwoCharToken {
         }
     }
 }
+
+impl TokenType for TwoCharToken {}

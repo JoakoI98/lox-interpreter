@@ -1,25 +1,16 @@
 use std::fmt::Display;
-
-use crate::Token::{
-    keyword_token::KeywordToken, literal_token::LiteralToken, single_char_token::SingleCharToken,
-    two_char_token::TwoCharToken,
-};
-
-#[derive(Debug)]
-pub enum TokenType {
-    SingleCharToken(SingleCharToken),
-    TwoCharToken(TwoCharToken),
-    LiteralToken(LiteralToken),
-    KeywordToken(KeywordToken),
+pub enum ArrangedTokens {
+    Single(Box<dyn TokenType>),
+    Multiple(Box<dyn TokenType>, Box<dyn TokenType>),
+    Same,
 }
 
-impl Display for TokenType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TokenType::SingleCharToken(token) => write!(f, "{}", token),
-            TokenType::TwoCharToken(token) => write!(f, "{}", token),
-            TokenType::LiteralToken(token) => write!(f, "{}", token),
-            TokenType::KeywordToken(token) => write!(f, "{}", token),
-        }
+pub trait TokenType: Display {
+    fn literal_value(&self) -> Option<String> {
+        None
+    }
+
+    fn arrange_token(&self, _lexeme: &str) -> Result<ArrangedTokens, super::scanner::TokenErrors> {
+        Ok(ArrangedTokens::Same)
     }
 }

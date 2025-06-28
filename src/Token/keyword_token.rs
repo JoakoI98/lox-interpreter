@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::Token::token_type::TokenType;
+
 #[derive(Debug)]
 pub enum KeywordToken {
     And,
@@ -66,3 +68,5 @@ impl Display for KeywordToken {
         }
     }
 }
+
+impl TokenType for KeywordToken {}

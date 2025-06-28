@@ -1,3 +1,6 @@
+use super::token_type::TokenType;
+use crate::Token::single_char_token::SingleCharToken;
+use crate::Token::token_type::ArrangedTokens;
 use regex::Regex;
 use std::fmt::Display;
 
@@ -61,44 +64,41 @@ impl LiteralToken {
         return last_char == '"';
     }
 
-    fn arrange_number(token: super::token::Token) -> Vec<super::token::Token> {
-        let last_char = token.lexeme.chars().last().unwrap();
-        let mut lexeme = token.lexeme.clone();
-        let mut tokens: Vec<super::token::Token> = Vec::new();
+    fn arrange_number(&self, lexeme: &str) -> ArrangedTokens {
+        let last_char = lexeme.chars().last().unwrap();
+        let mut lexeme = lexeme.to_string();
+        let mut single_char_token: Option<SingleCharToken> = None;
         if last_char == '.' {
-            let dot_token = super::token::Token::from_str(".", token.line, token.column_start);
-            if let Some(dot_token) = dot_token {
-                tokens.push(dot_token);
-            }
+            single_char_token = Some(SingleCharToken::Dot);
             lexeme.pop();
         }
 
-        let number_token =
-            super::token::Token::from_str(lexeme.as_str(), token.line, token.column_start);
+        let number_token = LiteralToken::from_str(lexeme.as_str());
+        let mut tokens = ArrangedTokens::Same;
+
         if let Some(number_token) = number_token {
-            tokens.insert(0, number_token);
+            let number_token = Box::new(number_token);
+            if let Some(single_char_token) = single_char_token {
+                tokens = ArrangedTokens::Multiple(number_token, Box::new(single_char_token));
+            } else {
+                tokens = ArrangedTokens::Single(number_token);
+            }
         }
 
         return tokens;
     }
 
-    pub fn arrange_token(
-        token: super::token::Token,
-    ) -> Result<Vec<super::token::Token>, super::scanner::ScannerError> {
-        match &token.token_type {
-            super::token_type::TokenType::LiteralToken(LiteralToken::Number(_)) => {
-                Ok(Self::arrange_number(token))
-            }
-            super::token_type::TokenType::LiteralToken(LiteralToken::String(_)) => {
-                if Self::is_valid_string(token.lexeme.clone().as_str()) {
-                    Ok(vec![token])
+    fn arrange_token(&self, lexeme: &str) -> Result<ArrangedTokens, super::scanner::TokenErrors> {
+        match self {
+            LiteralToken::Number(_) => Ok(self.arrange_number(lexeme)),
+            LiteralToken::String(_) => {
+                if Self::is_valid_string(lexeme.to_string().clone().as_str()) {
+                    Ok(ArrangedTokens::Same)
                 } else {
-                    Err(super::scanner::ScannerError::NotTerminatedString(
-                        token.line,
-                    ))
+                    Err(super::scanner::TokenErrors::NotTerminatedString)
                 }
             }
-            _ => Ok(vec![token]),
+            _ => Ok(ArrangedTokens::Same),
         }
     }
 
@@ -116,6 +116,20 @@ impl LiteralToken {
         }
 
         None
+    }
+}
+
+impl TokenType for LiteralToken {
+    fn literal_value(&self) -> Option<String> {
+        match self {
+            LiteralToken::String(s) => Some(s.clone()),
+            LiteralToken::Number(n) => Some(n.to_string()),
+            _ => None,
+        }
+    }
+
+    fn arrange_token(&self, lexeme: &str) -> Result<ArrangedTokens, super::scanner::TokenErrors> {
+        self.arrange_token(lexeme)
     }
 }
 
