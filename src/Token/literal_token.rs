@@ -123,7 +123,7 @@ impl TokenType for LiteralToken {
     fn literal_value(&self) -> Option<String> {
         match self {
             LiteralToken::String(s) => Some(s.clone()),
-            LiteralToken::Number(n) => Some(n.to_string()),
+            LiteralToken::Number(n) => Some(format!("{:?}", n)),
             _ => None,
         }
     }

@@ -1,77 +1,94 @@
 use std::fmt::Display;
 
-use crate::Token::token_type::ArrangedTokens;
+use crate::Token::{parsers::PARSERS, token_type::ArrangedTokens};
 
-use super::{
-    keyword_token::KeywordToken, literal_token::LiteralToken, single_char_token::SingleCharToken,
-    token_type::TokenType, two_char_token::TwoCharToken,
-};
+use super::{scanner::TokenErrors, token_type::TokenType};
 
 #[derive(Debug)]
-pub struct Token<T: TokenType> {
-    pub(super) token_type: T,
+pub struct Token {
+    pub(super) token_type: Box<dyn TokenType>,
     pub(super) lexeme: String,
     pub(super) line: usize,
     pub(super) column_start: usize,
     pub(super) column_end: usize,
 }
 
-impl<T: TokenType> Display for Token<T> {
+impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let literal_value: String = self.token_type.literal_value().unwrap_or("null".into());
         write!(f, "{} {} {}", self.token_type, self.lexeme, literal_value)
     }
 }
 
-impl<T: TokenType> Token<T> {
-    pub fn from_str(str: &str, line: usize, column_start: usize) -> Option<Token<T>> {
-        let single_char_token = SingleCharToken::from_str(str);
-        if let Some(single_char_token) = single_char_token {
-            return Some(Token {
-                token_type: TokenType::SingleCharToken(single_char_token),
-                lexeme: str.to_string(),
-                line,
-                column_start,
-                column_end: column_start + str.len(),
-            });
+impl Token {
+    pub fn from_str(str: &str, line: usize, column_start: usize) -> Option<Token> {
+        let mut token: Option<Box<dyn TokenType>> = None;
+        for &parser in PARSERS.iter() {
+            token = parser.parse_string(str);
+            if token.is_some() {
+                break;
+            }
         }
 
-        if let Some(two_char_token) = TwoCharToken::from_str(str) {
-            return Some(Token {
-                token_type: TokenType::TwoCharToken(two_char_token),
-                lexeme: str.to_string(),
-                line,
-                column_start,
-                column_end: column_start + str.len(),
-            });
+        if token.is_none() {
+            return None;
         }
 
-        if let Some(keyword_token) = KeywordToken::from_str(str) {
-            return Some(Token {
-                token_type: TokenType::KeywordToken(keyword_token),
-                lexeme: str.to_string(),
-                line,
-                column_start,
-                column_end: column_start + str.len(),
-            });
-        }
-
-        if let Some(literal_token) = LiteralToken::from_str(str) {
-            return Some(Token {
-                token_type: TokenType::LiteralToken(literal_token),
-                lexeme: str.to_string(),
-                line,
-                column_start,
-                column_end: column_start + str.len(),
-            });
-        }
-
-        return None;
+        let token = token.unwrap();
+        Some(Token {
+            token_type: token,
+            lexeme: str.to_string(),
+            line,
+            column_start,
+            column_end: column_start + str.len(),
+        })
     }
 
     pub fn arrange_token(
-        token: Token<T>,
-    ) -> Result<ArrangedTokens<T, SingleCharToken>, super::scanner::ScannerError> {
-        T::arrange_token(token)
+        token: Token,
+    ) -> Result<(Self, Option<Self>), super::scanner::ScannerError> {
+        let arranged_token_types = token.token_type.arrange_token(&token.lexeme);
+        if let Err(error) = arranged_token_types {
+            match error {
+                TokenErrors::NotTerminatedString => {
+                    return Err(super::scanner::ScannerError::NotTerminatedString(
+                        token.line,
+                    ));
+                }
+            }
+        }
+
+        let arranged_token_types = arranged_token_types.unwrap();
+
+        match arranged_token_types {
+            ArrangedTokens::Same => Ok((token, None)),
+            ArrangedTokens::Single(token_type) => {
+                let new_token = Token {
+                    token_type,
+                    lexeme: token.lexeme,
+                    line: token.line,
+                    column_start: token.column_start,
+                    column_end: token.column_end,
+                };
+                Ok((new_token, None))
+            }
+            ArrangedTokens::Multiple(first_type, second_type) => {
+                let first_token = Token {
+                    token_type: first_type,
+                    lexeme: token.lexeme.clone(),
+                    line: token.line,
+                    column_start: token.column_start,
+                    column_end: token.column_end,
+                };
+                let second_token = Token {
+                    token_type: second_type,
+                    lexeme: token.lexeme,
+                    line: token.line,
+                    column_start: token.column_start,
+                    column_end: token.column_end,
+                };
+                Ok((first_token, Some(second_token)))
+            }
+        }
     }
 }

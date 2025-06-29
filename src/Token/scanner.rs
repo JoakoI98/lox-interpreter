@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use thiserror::Error;
 
-use crate::Token::{single_char_token::SingleCharToken, token::Token, token_type::TokenType};
+use crate::Token::{single_char_token::SingleCharToken, token::Token};
 
 fn skip_single_line_comment(str: &str) -> (usize, usize, usize) {
     let mut byte_idx = 0;
@@ -71,6 +71,25 @@ pub enum TokenErrors {
 static ALLOWED_NON_TOKEN_CHARS: [char; 4] = [' ', '\t', '\r', '\n'];
 const LINE_SEPARATOR: char = '\n';
 
+fn push_token(
+    tokens: &mut Vec<Token>,
+    errors: &mut Vec<ScannerError>,
+    arranged_tokens: Result<(Token, Option<Token>), ScannerError>,
+) -> () {
+    match arranged_tokens {
+        Ok((token, None)) => {
+            tokens.push(token);
+        }
+        Ok((token, Some(token2))) => {
+            tokens.push(token);
+            tokens.push(token2);
+        }
+        Err(error) => {
+            errors.push(error);
+        }
+    };
+}
+
 pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
     let mut tokens = Vec::new();
     let mut errors: Vec<ScannerError> = Vec::new();
@@ -115,15 +134,7 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
             char_index += 1;
         } else if let Some(token) = last_token {
             last_token = None;
-            let safe_tokens = Token::arrange_token(token);
-            match safe_tokens {
-                Ok(safe_tokens) => {
-                    tokens.extend(safe_tokens);
-                }
-                Err(error) => {
-                    errors.push(error);
-                }
-            }
+            push_token(&mut tokens, &mut errors, Token::arrange_token(token));
             inside_lexeme = false;
         } else {
             if !non_token_chars_set.contains(&c) {
@@ -136,19 +147,11 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
     }
 
     if let Some(token) = last_token {
-        let safe_tokens = Token::arrange_token(token);
-        match safe_tokens {
-            Ok(safe_tokens) => {
-                tokens.extend(safe_tokens);
-            }
-            Err(error) => {
-                errors.push(error);
-            }
-        }
+        push_token(&mut tokens, &mut errors, Token::arrange_token(token));
     }
 
     tokens.push(Token {
-        token_type: TokenType::SingleCharToken(SingleCharToken::Eof),
+        token_type: Box::new(SingleCharToken::Eof),
         lexeme: "".to_string(),
         line,
         column_start: 0,
