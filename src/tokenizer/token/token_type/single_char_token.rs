@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::Token::token_type::TokenType;
+use super::TokenType;
 
 #[derive(Debug)]
 pub enum SingleCharToken {

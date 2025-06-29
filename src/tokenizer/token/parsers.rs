@@ -1,9 +1,9 @@
 use core::str;
 use std::sync::LazyLock;
 
-use crate::Token::{
+use super::token_type::{
     keyword_token::KeywordToken, literal_token::LiteralToken, single_char_token::SingleCharToken,
-    token_type::TokenType, two_char_token::TwoCharToken,
+    two_char_token::TwoCharToken, TokenType,
 };
 
 pub trait StringParserReceiver {

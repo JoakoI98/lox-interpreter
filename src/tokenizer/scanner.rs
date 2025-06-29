@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use thiserror::Error;
 
-use crate::Token::{single_char_token::SingleCharToken, token::Token};
+use super::token::{EOFToken, Token};
 
 fn skip_single_line_comment(str: &str) -> (usize, usize, usize) {
     let mut byte_idx = 0;
@@ -60,12 +60,6 @@ pub enum ScannerError {
 
     #[error("[line {0}] Error: Unterminated string.")]
     NotTerminatedString(usize),
-}
-
-#[derive(Error, Debug)]
-pub enum TokenErrors {
-    #[error("Error: Unterminated string.")]
-    NotTerminatedString,
 }
 
 static ALLOWED_NON_TOKEN_CHARS: [char; 4] = [' ', '\t', '\r', '\n'];
@@ -151,7 +145,7 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
     }
 
     tokens.push(Token {
-        token_type: Box::new(SingleCharToken::Eof),
+        token_type: Box::new(EOFToken),
         lexeme: "".to_string(),
         line,
         column_start: 0,

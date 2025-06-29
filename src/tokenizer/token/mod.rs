@@ -1,8 +1,19 @@
 use std::fmt::Display;
 
-use crate::Token::{parsers::PARSERS, token_type::ArrangedTokens};
+mod parsers;
+mod token_type;
 
-use super::{scanner::TokenErrors, token_type::TokenType};
+use parsers::PARSERS;
+use thiserror::Error;
+use token_type::{ArrangedTokens, TokenType};
+
+pub use token_type::single_char_token::SingleCharToken::Eof as EOFToken;
+
+#[derive(Error, Debug)]
+pub enum TokenErrors {
+    #[error("Error: Unterminated string.")]
+    NotTerminatedString,
+}
 
 #[derive(Debug)]
 pub struct Token {

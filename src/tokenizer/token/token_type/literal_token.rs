@@ -1,6 +1,4 @@
-use super::token_type::TokenType;
-use crate::Token::single_char_token::SingleCharToken;
-use crate::Token::token_type::ArrangedTokens;
+use super::{single_char_token::SingleCharToken, ArrangedTokens, TokenType};
 use regex::Regex;
 use std::fmt::Display;
 
@@ -88,14 +86,14 @@ impl LiteralToken {
         return tokens;
     }
 
-    fn arrange_token(&self, lexeme: &str) -> Result<ArrangedTokens, super::scanner::TokenErrors> {
+    fn arrange_token(&self, lexeme: &str) -> Result<ArrangedTokens, super::TokenErrors> {
         match self {
             LiteralToken::Number(_) => Ok(self.arrange_number(lexeme)),
             LiteralToken::String(_) => {
                 if Self::is_valid_string(lexeme.to_string().clone().as_str()) {
                     Ok(ArrangedTokens::Same)
                 } else {
-                    Err(super::scanner::TokenErrors::NotTerminatedString)
+                    Err(super::TokenErrors::NotTerminatedString)
                 }
             }
             _ => Ok(ArrangedTokens::Same),
@@ -128,7 +126,7 @@ impl TokenType for LiteralToken {
         }
     }
 
-    fn arrange_token(&self, lexeme: &str) -> Result<ArrangedTokens, super::scanner::TokenErrors> {
+    fn arrange_token(&self, lexeme: &str) -> Result<ArrangedTokens, super::TokenErrors> {
         self.arrange_token(lexeme)
     }
 }

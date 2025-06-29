@@ -1,11 +1,11 @@
-mod Token;
+mod tokenizer;
 
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::os::unix::process;
 
-use Token::scan_tokens;
+use tokenizer::scan_tokens;
 
 fn main() {
     run();
