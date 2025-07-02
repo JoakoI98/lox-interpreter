@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::TokenType;
+use super::{Token, TokenType};
 
 #[derive(Debug)]
 pub enum KeywordToken {
@@ -20,30 +20,6 @@ pub enum KeywordToken {
     True,
     Var,
     While,
-}
-
-impl KeywordToken {
-    pub fn from_str(str: &str) -> Option<KeywordToken> {
-        match str {
-            "and" => Some(KeywordToken::And),
-            "class" => Some(KeywordToken::Class),
-            "else" => Some(KeywordToken::Else),
-            "false" => Some(KeywordToken::False),
-            "fun" => Some(KeywordToken::Fun),
-            "for" => Some(KeywordToken::For),
-            "if" => Some(KeywordToken::If),
-            "nil" => Some(KeywordToken::Nil),
-            "or" => Some(KeywordToken::Or),
-            "return" => Some(KeywordToken::Return),
-            "super" => Some(KeywordToken::Super),
-            "print" => Some(KeywordToken::Print),
-            "this" => Some(KeywordToken::This),
-            "true" => Some(KeywordToken::True),
-            "var" => Some(KeywordToken::Var),
-            "while" => Some(KeywordToken::While),
-            _ => None,
-        }
-    }
 }
 
 impl Display for KeywordToken {
@@ -69,4 +45,25 @@ impl Display for KeywordToken {
     }
 }
 
-impl TokenType for KeywordToken {}
+impl TokenType for KeywordToken {
+    fn token_type(&self) -> Token {
+        match self {
+            KeywordToken::And => Token::And,
+            KeywordToken::Class => Token::Class,
+            KeywordToken::Else => Token::Else,
+            KeywordToken::False => Token::False,
+            KeywordToken::Fun => Token::Fun,
+            KeywordToken::For => Token::For,
+            KeywordToken::If => Token::If,
+            KeywordToken::Nil => Token::Nil,
+            KeywordToken::Or => Token::Or,
+            KeywordToken::Return => Token::Return,
+            KeywordToken::Super => Token::Super,
+            KeywordToken::Print => Token::Print,
+            KeywordToken::This => Token::This,
+            KeywordToken::True => Token::True,
+            KeywordToken::Var => Token::Var,
+            KeywordToken::While => Token::While,
+        }
+    }
+}

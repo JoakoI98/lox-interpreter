@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::TokenType;
+use super::{Token, TokenType};
 
 #[derive(Debug)]
 pub enum TwoCharToken {
@@ -8,22 +8,6 @@ pub enum TwoCharToken {
     EqualEqual,
     GreaterEqual,
     LessEqual,
-}
-
-impl TwoCharToken {
-    pub fn from_str(str: &str) -> Option<TwoCharToken> {
-        if str.len() != 2 {
-            return None;
-        }
-
-        match str {
-            "!=" => Some(TwoCharToken::BangEqual),
-            "==" => Some(TwoCharToken::EqualEqual),
-            ">=" => Some(TwoCharToken::GreaterEqual),
-            "<=" => Some(TwoCharToken::LessEqual),
-            _ => None,
-        }
-    }
 }
 
 impl Display for TwoCharToken {
@@ -37,4 +21,13 @@ impl Display for TwoCharToken {
     }
 }
 
-impl TokenType for TwoCharToken {}
+impl TokenType for TwoCharToken {
+    fn token_type(&self) -> Token {
+        match self {
+            TwoCharToken::BangEqual => Token::BangEqual,
+            TwoCharToken::EqualEqual => Token::EqualEqual,
+            TwoCharToken::GreaterEqual => Token::GreaterEqual,
+            TwoCharToken::LessEqual => Token::LessEqual,
+        }
+    }
+}

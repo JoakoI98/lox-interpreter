@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::TokenType;
+use super::{Token, TokenType};
 
 #[derive(Debug)]
 pub enum SingleCharToken {
@@ -20,35 +20,6 @@ pub enum SingleCharToken {
     Greater,
     Less,
     Eof,
-}
-
-impl SingleCharToken {
-    pub fn from_str(str: &str) -> Option<SingleCharToken> {
-        if str.len() != 1 {
-            return None;
-        }
-
-        let c = str.chars().next().unwrap();
-        match c {
-            '(' => Some(SingleCharToken::LeftParen),
-            ')' => Some(SingleCharToken::RightParen),
-            '{' => Some(SingleCharToken::LeftBrace),
-            '}' => Some(SingleCharToken::RightBrace),
-            ',' => Some(SingleCharToken::Comma),
-            '.' => Some(SingleCharToken::Dot),
-            '-' => Some(SingleCharToken::Minus),
-            '+' => Some(SingleCharToken::Plus),
-            ';' => Some(SingleCharToken::Semicolon),
-            '/' => Some(SingleCharToken::Slash),
-            '*' => Some(SingleCharToken::Star),
-            '!' => Some(SingleCharToken::Bang),
-            '=' => Some(SingleCharToken::Equal),
-            '>' => Some(SingleCharToken::Greater),
-            '<' => Some(SingleCharToken::Less),
-            '\0' => Some(SingleCharToken::Eof),
-            _ => None,
-        }
-    }
 }
 
 impl Display for SingleCharToken {
@@ -74,4 +45,25 @@ impl Display for SingleCharToken {
     }
 }
 
-impl TokenType for SingleCharToken {}
+impl TokenType for SingleCharToken {
+    fn token_type(&self) -> Token {
+        match self {
+            SingleCharToken::LeftParen => Token::LeftParen,
+            SingleCharToken::RightParen => Token::RightParen,
+            SingleCharToken::LeftBrace => Token::LeftBrace,
+            SingleCharToken::RightBrace => Token::RightBrace,
+            SingleCharToken::Comma => Token::Comma,
+            SingleCharToken::Dot => Token::Dot,
+            SingleCharToken::Minus => Token::Minus,
+            SingleCharToken::Plus => Token::Plus,
+            SingleCharToken::Semicolon => Token::Semicolon,
+            SingleCharToken::Slash => Token::Slash,
+            SingleCharToken::Star => Token::Star,
+            SingleCharToken::Bang => Token::Bang,
+            SingleCharToken::Equal => Token::Equal,
+            SingleCharToken::Greater => Token::Greater,
+            SingleCharToken::Less => Token::Less,
+            SingleCharToken::Eof => Token::Eof,
+        }
+    }
+}
