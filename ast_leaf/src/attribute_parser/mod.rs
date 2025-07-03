@@ -145,6 +145,7 @@ impl Production {
             // #[derive(Debug, PartialEq, Eq, Clone, Copy)]
             pub enum #enum_name_ident {
                 #(#items_tokens)*
+                None,
             }
         };
     }
@@ -164,24 +165,33 @@ impl Production {
 
         let type_field_ident = &struct_ast.type_field_ident;
 
-        let non_terminal_fields = struct_ast.non_terminal_fields.iter().map(|(name, ty)| {
+        let type_field_type_ident = Ident::new(&struct_ast.type_field, Span::call_site());
+
+        let non_terminal_fields = struct_ast.non_terminal_fields.iter().map(|(name, _)| {
             let name_ident = Ident::new(name, Span::call_site());
             quote! {
                 #name_ident
             }
         });
 
+        let peek1 = self.items[0].get_peek1();
+
         let items = self.items.iter().map(|item| item.get_parse_sentence());
         quote! {
 
-            impl #struct_name_ident {
+            impl Parser for #struct_name_ident {
 
-                pub fn parse(input: ParseStream) -> Result<Self> {
+                fn parse(input: &mut ParseStream) -> Result<Self> {
+                    let mut type_variant = #type_field_type_ident::None ;
                     #(#items)*
-                    Self {
-                        #type_field_ident
+                    std::result::Result::Ok(Self {
+                        #type_field_ident: type_variant,
                         #(#non_terminal_fields),*
-                    }
+                    })
+                }
+
+                fn peek(input: &ParseStream) -> bool {
+                    #peek1
                 }
 
             }

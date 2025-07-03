@@ -1,23 +1,11 @@
 use ast_leaf::ast_leaf;
-
 mod parsing;
 
-use parsing::{Minus, ParseStream, Plus, Result};
+pub use parsing::ParseStream;
+use parsing::{Minus, Parser, Plus, Result};
 
-pub enum PrimaryExpressionType {
-    Plus,
-    Minus,
-}
-struct PrimaryExpression {
+#[ast_leaf(("+" | "-"))]
+pub struct PrimaryExpression {
+    #[Type]
     pub token: PrimaryExpressionType,
-}
-impl PrimaryExpression {
-    pub fn parse(input: ParseStream) -> Result<Self> {
-        if input.peek::<Plus>() {
-            input.parse::<Plus>()?;
-        } else if input.peek::<Minus>() {
-            input.parse::<Minus>()?;
-        }
-        Self { token }
-    }
 }
