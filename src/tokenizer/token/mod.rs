@@ -6,7 +6,7 @@ use thiserror::Error;
 use token_type::ArrangedTokens;
 use token_type::PARSERS;
 
-pub use token_type::{EOFToken, TokenType, TokenValue};
+pub use token_type::{EOFToken, Token as TokenEnum, TokenType, TokenValue};
 
 #[derive(Error, Debug)]
 pub enum TokenErrors {
@@ -16,7 +16,7 @@ pub enum TokenErrors {
 
 #[derive(Debug)]
 pub struct Token {
-    pub(super) token_type: Box<dyn TokenType>,
+    pub token_type: Box<dyn TokenType>,
     pub(super) lexeme: String,
     pub(super) line: usize,
     pub(super) column_start: usize,

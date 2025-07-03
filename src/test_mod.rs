@@ -1,19 +1,11 @@
-use ast_leaf::ast_leaf;
-
-// #[ast_leaf("+" ("+" | "*" | 0: non_terminal) nt )]
-// pub struct MacroIntegrationTest {
-//     #[Type]
-//     pub testomg: TestType,
-//     pub testomg2: TestType,
-//     pub nt: String,
-// }
-
 mod syntax_analysis;
+mod test_mod;
 mod tokenizer;
 
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::os::unix::process;
 
 use tokenizer::scan_tokens;
 

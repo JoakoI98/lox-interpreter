@@ -6,16 +6,38 @@ use syn::{
     parenthesized,
     parse::{Lookahead1, Parse, ParseStream},
     punctuated::Punctuated,
-    token, Ident, LitStr, Result, Token,
+    token, Ident, LitStr, Result, Token, Type,
 };
 
 mod grouped;
 mod production_token;
 use production_token::ProductionToken;
 
+use crate::struct_parser;
+
 #[derive(Debug)]
 struct ProductionTokenChain {
     tokens: Vec<ProductionToken>,
+}
+
+impl ProductionTokenChain {
+    pub fn hydrate(self, name: &str, ty: Type) -> ProductionTokenChain {
+        let tokens = self
+            .tokens
+            .into_iter()
+            .map(|token| token.hydrate(name, ty.clone()))
+            .collect();
+        ProductionTokenChain { tokens }
+    }
+
+    pub fn get_parse_sentence(&self) -> TokenStream {
+        let tokens = self.tokens.iter().map(|token| token.get_parse_sentence());
+        quote! { #(#tokens)* }
+    }
+
+    pub fn get_peek1(&self) -> TokenStream {
+        self.tokens[0].get_peek1()
+    }
 }
 
 impl Parse for ProductionTokenChain {
@@ -57,6 +79,35 @@ impl ProductionItem {
             ProductionItem::ProductionTokenChain(_) => quote! {},
         }
     }
+
+    pub fn hydrate(self, name: &str, ty: Type) -> ProductionItem {
+        match self {
+            ProductionItem::Group(group) => ProductionItem::Group(group.hydrate(name, ty.clone())),
+            ProductionItem::ProductionTokenChain(production_token_chain) => {
+                ProductionItem::ProductionTokenChain(
+                    production_token_chain.hydrate(name, ty.clone()),
+                )
+            }
+        }
+    }
+
+    pub fn get_parse_sentence(&self) -> TokenStream {
+        match self {
+            ProductionItem::Group(group) => group.get_parse_sentence(),
+            ProductionItem::ProductionTokenChain(production_token_chain) => {
+                production_token_chain.get_parse_sentence()
+            }
+        }
+    }
+
+    pub fn get_peek1(&self) -> TokenStream {
+        match self {
+            ProductionItem::Group(group) => group.get_peek1(),
+            ProductionItem::ProductionTokenChain(production_token_chain) => {
+                production_token_chain.get_peek1()
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -80,7 +131,7 @@ impl Parse for Production {
 }
 
 impl Production {
-    pub fn get_enum(&self, name: &str) -> TokenStream {
+    pub fn get_enum(&self, enum_name: &str) -> TokenStream {
         let items_tokens: Vec<TokenStream> = self
             .items
             .iter()
@@ -89,13 +140,55 @@ impl Production {
         if items_tokens.is_empty() {
             return quote! {};
         }
-        let enum_name_str = name.to_string() + "_Type";
-        let enum_name = Ident::new(&enum_name_str, Span::call_site());
+        let enum_name_ident = Ident::new(enum_name, Span::call_site());
         return quote! {
-            #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-            pub enum #enum_name {
+            // #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+            pub enum #enum_name_ident {
                 #(#items_tokens)*
             }
         };
+    }
+
+    pub fn hydrate(self, name: &str, ty: Type) -> Production {
+        let items = self
+            .items
+            .into_iter()
+            .map(|item| item.hydrate(name, ty.clone()))
+            .collect();
+        Production { items }
+    }
+
+    pub fn get_parse_sentence(&self, struct_ast: &struct_parser::ASTLeafStruct) -> TokenStream {
+        let struct_name = struct_ast.name.to_string();
+        let struct_name_ident = Ident::new(&struct_name, Span::call_site());
+
+        let type_field_ident = &struct_ast.type_field_ident;
+
+        let non_terminal_fields = struct_ast.non_terminal_fields.iter().map(|(name, ty)| {
+            let name_ident = Ident::new(name, Span::call_site());
+            quote! {
+                #name_ident
+            }
+        });
+
+        let items = self.items.iter().map(|item| item.get_parse_sentence());
+        quote! {
+
+            impl #struct_name_ident {
+
+                pub fn parse(input: ParseStream) -> Result<Self> {
+                    #(#items)*
+                    Self {
+                        #type_field_ident
+                        #(#non_terminal_fields),*
+                    }
+                }
+
+            }
+        }
+    }
+
+    pub fn get_peek1(&self) -> TokenStream {
+        self.items[0].get_peek1()
     }
 }

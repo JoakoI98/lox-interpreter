@@ -6,10 +6,12 @@ use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    token, Ident, LitInt, Result, Token,
+    token, Ident, LitInt, Result, Token, Type,
 };
 
-use super::production_token::{ProductionToken, UnhydratedNonTerminal};
+use crate::attribute_parser::production_token::HydratedNonTerminal;
+
+use super::production_token::{NonTerminal, ProductionToken};
 
 #[derive(Debug)]
 struct InGroupProduction {
@@ -47,6 +49,38 @@ impl InGroupProduction {
     pub fn get_enum_field(&self) -> TokenStream {
         self.tokens[self.store_index as usize].get_enum_field()
     }
+
+    pub fn hydrate(self, name: &str, ty: Type) -> InGroupProduction {
+        let tokens = self
+            .tokens
+            .into_iter()
+            .map(|token| match &token {
+                ProductionToken::NonTerminal(NonTerminal::Unhydrated(unhydrated)) => {
+                    let type_ident = Ident::new(&unhydrated.name, unhydrated.span);
+                    let ty = Type::Verbatim(quote! { #type_ident });
+                    ProductionToken::NonTerminal(NonTerminal::Hydrated(HydratedNonTerminal {
+                        name: unhydrated.name.clone(),
+                        span: unhydrated.span,
+                        ty,
+                    }))
+                }
+                _ => token,
+            })
+            .collect();
+        InGroupProduction {
+            tokens,
+            store_index: self.store_index,
+        }
+    }
+
+    pub fn get_parse_sentence(&self) -> TokenStream {
+        let tokens = self.tokens.iter().map(|token| token.get_parse_sentence());
+        quote! { #(#tokens)* }
+    }
+
+    pub fn get_peek1(&self) -> TokenStream {
+        self.tokens[0].get_peek1()
+    }
 }
 
 #[derive(Debug)]
@@ -73,6 +107,31 @@ impl GroupOrElement {
         match self {
             GroupOrElement::ProductionToken(token) => token.get_enum_field(),
             GroupOrElement::InGroupProduction(production) => production.get_enum_field(),
+        }
+    }
+
+    pub fn hydrate(self, name: &str, ty: Type) -> GroupOrElement {
+        match self {
+            GroupOrElement::ProductionToken(token) => {
+                GroupOrElement::ProductionToken(token.hydrate(name, ty.clone()))
+            }
+            GroupOrElement::InGroupProduction(production) => {
+                GroupOrElement::InGroupProduction(production.hydrate(name, ty.clone()))
+            }
+        }
+    }
+
+    pub fn get_parse_sentence(&self) -> TokenStream {
+        match self {
+            GroupOrElement::ProductionToken(token) => token.get_parse_sentence(),
+            GroupOrElement::InGroupProduction(production) => production.get_parse_sentence(),
+        }
+    }
+
+    pub fn get_peek1(&self) -> TokenStream {
+        match self {
+            GroupOrElement::ProductionToken(token) => token.get_peek1(),
+            GroupOrElement::InGroupProduction(production) => production.get_peek1(),
         }
     }
 }
@@ -104,6 +163,51 @@ impl GroupedOr {
                 #(#types_tokens),*
         };
     }
+
+    pub fn hydrate(self, name: &str, ty: Type) -> GroupedOr {
+        let elements = self
+            .elements
+            .into_iter()
+            .map(|element| element.hydrate(name, ty.clone()))
+            .collect();
+        GroupedOr { elements }
+    }
+
+    pub fn get_parse_sentence(&self) -> TokenStream {
+        let peek1 = self.elements.iter().map(|element| element.get_peek1());
+        let match_tokens: Vec<TokenStream> = self
+            .elements
+            .iter()
+            .map(|element| element.get_parse_sentence())
+            .collect();
+        let enum_variants: Vec<TokenStream> = self
+            .elements
+            .iter()
+            .map(|element| element.get_enum_field())
+            .collect();
+
+        let mut i: usize = 0;
+        let if_tokens = peek1.map(|peek| {
+            let match_token = &match_tokens[i];
+            let enum_variant = &enum_variants[i];
+            i += 1;
+            quote! {
+                if #peek {
+                    type_variant = PrimaryExpressionType::#enum_variant;
+                    #match_token
+                }
+            }
+        });
+
+        return quote! {
+            #(#if_tokens)else*
+        };
+    }
+
+    pub fn get_peek1(&self) -> TokenStream {
+        let peek1_tokens = self.elements.iter().map(|element| element.get_peek1());
+        quote! { #(#peek1_tokens)||* }
+    }
 }
 
 #[derive(Debug)]
@@ -117,7 +221,7 @@ enum GroupPostfix {
 #[derive(Debug)]
 pub struct Group {
     or_elements: Option<GroupedOr>,
-    non_terminal: Option<UnhydratedNonTerminal>,
+    non_terminal: Option<NonTerminal>,
     postfix: GroupPostfix,
 }
 
@@ -141,7 +245,7 @@ impl Parse for Group {
         }
         let mut non_terminal = None;
         if main_content.peek(Ident) {
-            non_terminal = Some(main_content.parse::<UnhydratedNonTerminal>()?);
+            non_terminal = Some(main_content.parse::<NonTerminal>()?);
         }
         if non_terminal.is_none() && or_elements.is_none() {
             return Err(syn::Error::new(
@@ -174,5 +278,47 @@ impl Group {
             return or_elements.get_enum_field();
         }
         return quote! {};
+    }
+
+    pub fn hydrate(self, name: &str, ty: Type) -> Group {
+        let or_elements = self
+            .or_elements
+            .map(|or_elements| or_elements.hydrate(name, ty.clone()));
+        let non_terminal = self
+            .non_terminal
+            .map(|non_terminal| non_terminal.hydrate(name, ty.clone()));
+        Group {
+            or_elements,
+            non_terminal,
+            postfix: self.postfix,
+        }
+    }
+
+    pub fn get_parse_sentence(&self) -> TokenStream {
+        let or_elements = self
+            .or_elements
+            .as_ref()
+            .map(|or_elements| or_elements.get_parse_sentence())
+            .unwrap_or(quote! {});
+        let non_terminal = self
+            .non_terminal
+            .as_ref()
+            .map(|non_terminal| non_terminal.get_parse_sentence())
+            .unwrap_or(quote! {});
+        return quote! {
+            #or_elements
+            #non_terminal
+        };
+    }
+
+    pub fn get_peek1(&self) -> TokenStream {
+        match &self.or_elements {
+            Some(or_elements) => or_elements.get_peek1(),
+            None => self
+                .non_terminal
+                .as_ref()
+                .map(|non_terminal| non_terminal.get_peek1())
+                .unwrap_or(quote! {}),
+        }
     }
 }
