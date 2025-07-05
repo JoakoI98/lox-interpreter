@@ -147,9 +147,32 @@ impl NonTerminal {
             NonTerminal::Hydrated(hydrated) => hydrated,
             NonTerminal::Unhydrated(_) => panic!("Unhydrated non-terminal found"),
         };
+        let ty = &hydrated.ty;
+        quote! { #ty(#ty) }
+    }
+
+    pub fn get_name(&self) -> &str {
+        match self {
+            NonTerminal::Hydrated(hydrated) => &hydrated.name,
+            NonTerminal::Unhydrated(unhydrated) => &unhydrated.name,
+        }
+    }
+
+    pub fn get_type(&self) -> &Type {
+        match self {
+            NonTerminal::Hydrated(hydrated) => &hydrated.ty,
+            NonTerminal::Unhydrated(_) => panic!("Unhydrated non-terminal found"),
+        }
+    }
+
+    pub fn get_enum_sentence(&self) -> TokenStream {
+        let hydrated = match self {
+            NonTerminal::Hydrated(hydrated) => hydrated,
+            NonTerminal::Unhydrated(_) => panic!("Unhydrated non-terminal found"),
+        };
         let name = Ident::new(&hydrated.name, Span::call_site());
         let ty = &hydrated.ty;
-        quote! { #name(#ty) }
+        quote! { #ty(#name) }
     }
 
     pub fn hydrate(self, name: &str, ty: Type) -> NonTerminal {
@@ -219,6 +242,13 @@ impl ProductionToken {
         match self {
             ProductionToken::Terminal(terminal) => quote! { #terminal},
             ProductionToken::NonTerminal(non_terminal) => non_terminal.get_enum_field(),
+        }
+    }
+
+    pub fn get_enum_sentence(&self) -> TokenStream {
+        match self {
+            ProductionToken::Terminal(terminal) => quote! { #terminal},
+            ProductionToken::NonTerminal(non_terminal) => non_terminal.get_enum_sentence(),
         }
     }
 

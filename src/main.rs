@@ -74,9 +74,9 @@ fn run() {
                     std::process::exit(65);
                 }
                 let mut parse_stream = syntax_analysis::ParseStream::new(tokens);
-                let r = parse_stream.parse::<syntax_analysis::PrimaryExpression>();
-                if r.is_ok() {
-                    println!("Parsed successfully");
+                let r = parse_stream.parse::<syntax_analysis::UnaryExpression>();
+                if let Ok(r) = r {
+                    println!("Parsed successfully {:?}", r);
                 } else {
                     println!("Parse failed");
                 }

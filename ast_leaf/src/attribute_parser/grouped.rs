@@ -1,7 +1,7 @@
 use quote::quote;
 use std::collections::LinkedList;
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
@@ -9,9 +9,20 @@ use syn::{
     token, Ident, LitInt, Result, Token, Type,
 };
 
-use crate::attribute_parser::production_token::HydratedNonTerminal;
+use crate::attribute_parser::{production_token::HydratedNonTerminal, type_wrapper::TypeWrapper};
 
 use super::production_token::{NonTerminal, ProductionToken};
+
+pub fn to_snake_case(name: &str) -> String {
+    let mut snake_case = String::new();
+    for (i, c) in name.chars().enumerate() {
+        if i > 0 && c.is_uppercase() {
+            snake_case.push('_');
+        }
+        snake_case.push(c.to_ascii_lowercase());
+    }
+    snake_case
+}
 
 #[derive(Debug)]
 struct InGroupProduction {
@@ -50,7 +61,11 @@ impl InGroupProduction {
         self.tokens[self.store_index as usize].get_enum_field()
     }
 
-    pub fn hydrate(self, name: &str, ty: Type) -> InGroupProduction {
+    pub fn get_enum_sentence(&self) -> TokenStream {
+        self.tokens[self.store_index as usize].get_enum_sentence()
+    }
+
+    pub fn hydrate(self, _name: &str, _ty: Type) -> InGroupProduction {
         let tokens = self
             .tokens
             .into_iter()
@@ -59,7 +74,7 @@ impl InGroupProduction {
                     let type_ident = Ident::new(&unhydrated.name, unhydrated.span);
                     let ty = Type::Verbatim(quote! { #type_ident });
                     ProductionToken::NonTerminal(NonTerminal::Hydrated(HydratedNonTerminal {
-                        name: unhydrated.name.clone(),
+                        name: to_snake_case(&unhydrated.name),
                         span: unhydrated.span,
                         ty,
                     }))
@@ -107,6 +122,13 @@ impl GroupOrElement {
         match self {
             GroupOrElement::ProductionToken(token) => token.get_enum_field(),
             GroupOrElement::InGroupProduction(production) => production.get_enum_field(),
+        }
+    }
+
+    pub fn get_enum_sentence(&self) -> TokenStream {
+        match self {
+            GroupOrElement::ProductionToken(token) => token.get_enum_sentence(),
+            GroupOrElement::InGroupProduction(production) => production.get_enum_sentence(),
         }
     }
 
@@ -173,17 +195,18 @@ impl GroupedOr {
         GroupedOr { elements }
     }
 
-    pub fn get_parse_sentence(&self) -> TokenStream {
+    pub fn get_parse_sentence(&self, enum_name: &str) -> TokenStream {
         let peek1 = self.elements.iter().map(|element| element.get_peek1());
         let match_tokens: Vec<TokenStream> = self
             .elements
             .iter()
             .map(|element| element.get_parse_sentence())
             .collect();
+        let enum_name_ident = Ident::new(enum_name, Span::call_site());
         let enum_variants: Vec<TokenStream> = self
             .elements
             .iter()
-            .map(|element| element.get_enum_field())
+            .map(|element| element.get_enum_sentence())
             .collect();
 
         let mut i: usize = 0;
@@ -193,8 +216,8 @@ impl GroupedOr {
             i += 1;
             quote! {
                 if #peek {
-                    type_variant = PrimaryExpressionType::#enum_variant;
                     #match_token
+                    type_variant = #enum_name_ident::#enum_variant;
                 }
             }
         });
@@ -280,13 +303,97 @@ impl Group {
         return quote! {};
     }
 
+    fn get_parse_option(&self) -> TokenStream {
+        let non_terminal = self.non_terminal.as_ref();
+        if non_terminal.is_none() {
+            return quote! {};
+        }
+        let non_terminal = non_terminal.unwrap();
+        let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
+        let non_terminal_type = non_terminal.get_type();
+        let peek_sentence = non_terminal.get_peek1();
+        quote! {
+            let mut #non_terminal_name = None;
+            if #peek_sentence {
+                #non_terminal_name = Some(input.parse::<#non_terminal_type>()?);
+            }
+        }
+    }
+
+    fn get_parse_star(&self) -> TokenStream {
+        let non_terminal = self.non_terminal.as_ref();
+        if non_terminal.is_none() {
+            return quote! {};
+        }
+        let non_terminal = non_terminal.unwrap();
+        let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
+        let non_terminal_type = non_terminal.get_type();
+        let peek_sentence = non_terminal.get_peek1();
+        quote! {
+            let mut #non_terminal_name = std::collections::LinkedList::new();
+            while #peek_sentence {
+                #non_terminal_name.push_back(input.parse::<#non_terminal_type>()?);
+            }
+            let #non_terminal_name: Vec<_> = #non_terminal_name.into_iter().collect();
+        }
+    }
+
+    fn get_parse_plus(&self) -> TokenStream {
+        let non_terminal = self.non_terminal.as_ref();
+        if non_terminal.is_none() {
+            return quote! {};
+        }
+        let non_terminal = non_terminal.unwrap();
+        let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
+        let non_terminal_type = non_terminal.get_type();
+        let peek_sentence = non_terminal.get_peek1();
+        quote! {
+            let mut #non_terminal_name = std::collections::LinkedList::new();
+            #non_terminal_name.push_back(input.parse::<#non_terminal_type>()?);
+            while #peek_sentence {
+                #non_terminal_name.push_back(input.parse::<#non_terminal_type>()?);
+            }
+            let #non_terminal_name: Vec<_> = #non_terminal_name.into_iter().collect();
+        }
+    }
+
+    fn get_parse_non_terminal(&self) -> TokenStream {
+        self.non_terminal
+            .as_ref()
+            .map(|non_terminal| non_terminal.get_parse_sentence())
+            .unwrap_or(quote! {})
+    }
+
     pub fn hydrate(self, name: &str, ty: Type) -> Group {
+        let is_non_terminal = self
+            .non_terminal
+            .as_ref()
+            .map(|non_terminal| non_terminal.get_name() == name)
+            .unwrap_or(false);
+
+        let mut type_to_hydrate = ty;
+        if is_non_terminal {
+            let type_wrapper = TypeWrapper::new(&type_to_hydrate);
+            match self.postfix {
+                GroupPostfix::Star => {
+                    type_to_hydrate = type_wrapper.validate_type("Vec", 0);
+                }
+                GroupPostfix::Plus => {
+                    type_to_hydrate = type_wrapper.validate_type("Vec", 0);
+                }
+                GroupPostfix::Question => {
+                    type_to_hydrate = type_wrapper.validate_type("Option", 0);
+                }
+                _ => {}
+            }
+        }
+
         let or_elements = self
             .or_elements
-            .map(|or_elements| or_elements.hydrate(name, ty.clone()));
+            .map(|or_elements| or_elements.hydrate(name, type_to_hydrate.clone()));
         let non_terminal = self
             .non_terminal
-            .map(|non_terminal| non_terminal.hydrate(name, ty.clone()));
+            .map(|non_terminal| non_terminal.hydrate(name, type_to_hydrate.clone()));
         Group {
             or_elements,
             non_terminal,
@@ -294,17 +401,18 @@ impl Group {
         }
     }
 
-    pub fn get_parse_sentence(&self) -> TokenStream {
+    pub fn get_parse_sentence(&self, enum_name: &str) -> TokenStream {
         let or_elements = self
             .or_elements
             .as_ref()
-            .map(|or_elements| or_elements.get_parse_sentence())
+            .map(|or_elements| or_elements.get_parse_sentence(enum_name))
             .unwrap_or(quote! {});
-        let non_terminal = self
-            .non_terminal
-            .as_ref()
-            .map(|non_terminal| non_terminal.get_parse_sentence())
-            .unwrap_or(quote! {});
+        let non_terminal = match &self.postfix {
+            GroupPostfix::Star => self.get_parse_star(),
+            GroupPostfix::Plus => self.get_parse_plus(),
+            GroupPostfix::Question => self.get_parse_option(),
+            GroupPostfix::None => self.get_parse_non_terminal(),
+        };
         return quote! {
             #or_elements
             #non_terminal
@@ -314,11 +422,14 @@ impl Group {
     pub fn get_peek1(&self) -> TokenStream {
         match &self.or_elements {
             Some(or_elements) => or_elements.get_peek1(),
-            None => self
-                .non_terminal
-                .as_ref()
-                .map(|non_terminal| non_terminal.get_peek1())
-                .unwrap_or(quote! {}),
+            None => match &self.postfix {
+                GroupPostfix::None | GroupPostfix::Plus => self
+                    .non_terminal
+                    .as_ref()
+                    .map(|non_terminal| non_terminal.get_peek1())
+                    .unwrap_or(quote! {}),
+                _ => quote! {true},
+            },
         }
     }
 }

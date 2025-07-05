@@ -1,12 +1,14 @@
 use std::fmt::Display;
 
+mod static_token;
 mod token_type;
 
 use thiserror::Error;
 use token_type::ArrangedTokens;
 use token_type::PARSERS;
 
-pub use token_type::{EOFToken, Token as TokenEnum, TokenType, TokenValue};
+pub use static_token::StaticToken;
+pub use token_type::{EOFToken, Token as TokenEnum, TokenType};
 
 #[derive(Error, Debug)]
 pub enum TokenErrors {

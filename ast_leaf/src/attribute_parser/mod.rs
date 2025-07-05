@@ -3,14 +3,13 @@ use quote::quote;
 use std::collections::LinkedList;
 
 use syn::{
-    parenthesized,
-    parse::{Lookahead1, Parse, ParseStream},
-    punctuated::Punctuated,
-    token, Ident, LitStr, Result, Token, Type,
+    parse::{Parse, ParseStream},
+    token, Ident, Result, Type,
 };
 
 mod grouped;
 mod production_token;
+pub mod type_wrapper;
 use production_token::ProductionToken;
 
 use crate::struct_parser;
@@ -91,9 +90,9 @@ impl ProductionItem {
         }
     }
 
-    pub fn get_parse_sentence(&self) -> TokenStream {
+    pub fn get_parse_sentence(&self, enum_name: &str) -> TokenStream {
         match self {
-            ProductionItem::Group(group) => group.get_parse_sentence(),
+            ProductionItem::Group(group) => group.get_parse_sentence(enum_name),
             ProductionItem::ProductionTokenChain(production_token_chain) => {
                 production_token_chain.get_parse_sentence()
             }
@@ -142,9 +141,9 @@ impl Production {
         }
         let enum_name_ident = Ident::new(enum_name, Span::call_site());
         return quote! {
-            // #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+            #[derive(Debug, PartialEq, Eq, Clone)]
             pub enum #enum_name_ident {
-                #(#items_tokens)*
+                #(#items_tokens)*,
                 None,
             }
         };
@@ -176,7 +175,10 @@ impl Production {
 
         let peek1 = self.items[0].get_peek1();
 
-        let items = self.items.iter().map(|item| item.get_parse_sentence());
+        let items = self
+            .items
+            .iter()
+            .map(|item| item.get_parse_sentence(&struct_ast.type_field));
         quote! {
 
             impl Parser for #struct_name_ident {

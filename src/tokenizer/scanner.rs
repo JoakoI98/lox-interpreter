@@ -1,7 +1,7 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, LinkedList};
 use thiserror::Error;
 
-use super::token::{EOFToken, Token};
+use super::token::{EOFToken, StaticToken, Token};
 
 fn skip_single_line_comment(str: &str) -> (usize, usize, usize) {
     let mut byte_idx = 0;
@@ -66,43 +66,41 @@ static ALLOWED_NON_TOKEN_CHARS: [char; 4] = [' ', '\t', '\r', '\n'];
 const LINE_SEPARATOR: char = '\n';
 
 fn push_token(
-    tokens: &mut Vec<Token>,
-    errors: &mut Vec<ScannerError>,
+    tokens: &mut LinkedList<Token>,
+    errors: &mut LinkedList<ScannerError>,
     arranged_tokens: Result<(Token, Option<Token>), ScannerError>,
 ) -> () {
     match arranged_tokens {
         Ok((token, None)) => {
-            tokens.push(token);
+            tokens.push_back(token);
         }
         Ok((token, Some(token2))) => {
-            tokens.push(token);
-            tokens.push(token2);
+            tokens.push_back(token);
+            tokens.push_back(token2);
         }
         Err(error) => {
-            errors.push(error);
+            errors.push_back(error);
         }
     };
 }
 
-pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
-    let mut tokens = Vec::new();
-    let mut errors: Vec<ScannerError> = Vec::new();
+pub fn scan_tokens(file_content: &str) -> (Vec<StaticToken>, Vec<ScannerError>) {
+    let mut tokens = LinkedList::new();
+    let mut errors = LinkedList::new();
     let mut current_byte_idx = 0;
     let mut line = 1;
-    let mut line_start_byte_idx = 0;
     let mut current_lexeme_start_byte_idx: usize = 0;
     let mut inside_lexeme = false;
     let mut last_token: Option<Token> = None;
     let non_token_chars_set: HashSet<char> = ALLOWED_NON_TOKEN_CHARS.into_iter().collect();
     let mut char_index = 0;
-    let mut c: char = '\0';
+    let mut c: char;
 
     while current_byte_idx < file_content.len() {
         c = file_content.chars().nth(char_index).unwrap();
 
         if c == LINE_SEPARATOR && !inside_lexeme {
             line += 1;
-            line_start_byte_idx = current_byte_idx;
         }
 
         if !inside_lexeme {
@@ -132,7 +130,7 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
             inside_lexeme = false;
         } else {
             if !non_token_chars_set.contains(&c) {
-                errors.push(ScannerError::UnexpectedCharacter(c, line));
+                errors.push_back(ScannerError::UnexpectedCharacter(c, line));
             }
             current_byte_idx += c.len_utf8();
             char_index += 1;
@@ -144,7 +142,7 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
         push_token(&mut tokens, &mut errors, Token::arrange_token(token));
     }
 
-    tokens.push(Token {
+    tokens.push_back(Token {
         token_type: Box::new(EOFToken),
         lexeme: "".to_string(),
         line,
@@ -152,5 +150,5 @@ pub fn scan_tokens(file_content: &str) -> (Vec<Token>, Vec<ScannerError>) {
         column_end: 0,
     });
 
-    (tokens, errors)
+    (tokens.into_iter().collect(), errors.into_iter().collect())
 }

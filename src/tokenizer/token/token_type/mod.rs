@@ -18,6 +18,7 @@ pub enum ArrangedTokens {
     Same,
 }
 
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenValue {
     Number(f64),
     String(String),
@@ -93,4 +94,51 @@ pub enum Token {
     Number,
     String,
     Identifier,
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string_representation = match self {
+            Token::LeftParen => "(",
+            Token::RightParen => ")",
+            Token::LeftBrace => "{",
+            Token::RightBrace => "}",
+            Token::Comma => ",",
+            Token::Dot => ".",
+            Token::Minus => "-",
+            Token::Plus => "+",
+            Token::Semicolon => ";",
+            Token::Slash => "/",
+            Token::Star => "*",
+            Token::Bang => "!",
+            Token::Equal => "=",
+            Token::Greater => ">",
+            Token::Less => "<",
+            Token::Eof => "EOF",
+            Token::BangEqual => "!=",
+            Token::EqualEqual => "==",
+            Token::GreaterEqual => ">=",
+            Token::LessEqual => "<=",
+            Token::And => "and",
+            Token::Class => "class",
+            Token::Else => "else",
+            Token::False => "false",
+            Token::Fun => "fun",
+            Token::For => "for",
+            Token::If => "if",
+            Token::Nil => "nil",
+            Token::Or => "or",
+            Token::Print => "print",
+            Token::Return => "return",
+            Token::Super => "super",
+            Token::This => "this",
+            Token::True => "true",
+            Token::Var => "var",
+            Token::While => "while",
+            Token::Number => "number",
+            Token::String => "string",
+            Token::Identifier => "identifier",
+        };
+        write!(f, "{}", string_representation)
+    }
 }
