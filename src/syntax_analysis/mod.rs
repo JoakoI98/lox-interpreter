@@ -9,14 +9,7 @@ use parsing::primitives::{
 };
 pub use parsing::{ParseStream, Parser, Result};
 
-#[ast_leaf(("nil" | "STRING"))]
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct TestExpression {
-    #[Type]
-    pub token_type: TestExpressionType,
-}
-
-#[ast_leaf(("NUMBER" | "STRING" | "true" | "false" | "nil" | 1: "(" TestExpression ")" ))]
+#[ast_leaf(("NUMBER" | "STRING" | "true" | "false" | "nil" | 1: "(" Expression ")" ))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PrimaryExpression {
     #[Type]
@@ -86,10 +79,14 @@ pub struct Equality {
     pub comparisons: Vec<(EqualityType, Comparison)>,
 }
 
-#[ast_leaf(comparison)]
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Expression {
-    #[Type]
-    pub token_type: ExpressionType,
-    pub comparison: Comparison,
+type Expression = Box<Equality>;
+impl Parser for Expression {
+    fn parse(input: &mut ParseStream) -> Result<Self> {
+        let equality = input.parse::<Equality>()?;
+        Ok(Box::new(equality))
+    }
+
+    fn peek(input: &ParseStream) -> bool {
+        input.peek::<Equality>()
+    }
 }
