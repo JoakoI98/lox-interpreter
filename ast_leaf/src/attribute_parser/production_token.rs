@@ -175,11 +175,11 @@ impl NonTerminal {
         quote! { #ty(#name) }
     }
 
-    pub fn hydrate(self, name: &str, ty: Type) -> NonTerminal {
+    pub fn hydrate(self, name: &str, ty: Type, force: bool) -> NonTerminal {
         match &self {
             NonTerminal::Hydrated(_) => self,
             NonTerminal::Unhydrated(unhydrated) => {
-                if unhydrated.name != name {
+                if unhydrated.name != name && !force {
                     return self;
                 }
                 let hydrated = HydratedNonTerminal {
@@ -252,11 +252,11 @@ impl ProductionToken {
         }
     }
 
-    pub fn hydrate(self, name: &str, ty: Type) -> ProductionToken {
+    pub fn hydrate(self, name: &str, ty: Type, force: bool) -> ProductionToken {
         match self {
             ProductionToken::Terminal(terminal) => ProductionToken::Terminal(terminal),
             ProductionToken::NonTerminal(non_terminal) => {
-                ProductionToken::NonTerminal(non_terminal.hydrate(name, ty))
+                ProductionToken::NonTerminal(non_terminal.hydrate(name, ty, force))
             }
         }
     }

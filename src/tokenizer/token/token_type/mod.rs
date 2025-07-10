@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Display};
+use thiserror::Error;
 
 mod parser;
 
@@ -26,6 +27,58 @@ pub enum TokenValue {
     None,
 }
 
+impl Display for TokenValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenValue::Number(number) => write!(f, "{}", number),
+            TokenValue::String(string) => write!(f, "{}", string),
+            TokenValue::Identifier(identifier) => write!(f, "{}", identifier),
+            TokenValue::None => write!(f, "none"),
+        }
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum TokenValueError {
+    #[error("Expected number, got {:?}", .0)]
+    ExpectedNumber(TokenValue),
+    #[error("Expected string, got {:?}", .0)]
+    ExpectedString(TokenValue),
+    #[error("Expected identifier, got {:?}", .0)]
+    ExpectedIdentifier(TokenValue),
+    #[error("Expected none, got {:?}", .0)]
+    ExpectedNone(TokenValue),
+}
+
+impl TokenValue {
+    pub fn number(&self) -> Result<f64, TokenValueError> {
+        match self {
+            TokenValue::Number(number) => Ok(*number),
+            _ => Err(TokenValueError::ExpectedNumber(self.clone())),
+        }
+    }
+
+    pub fn string(&self) -> Result<String, TokenValueError> {
+        match self {
+            TokenValue::String(string) => Ok(string.clone()),
+            _ => Err(TokenValueError::ExpectedString(self.clone())),
+        }
+    }
+
+    pub fn identifier(&self) -> Result<String, TokenValueError> {
+        match self {
+            TokenValue::Identifier(identifier) => Ok(identifier.clone()),
+            _ => Err(TokenValueError::ExpectedIdentifier(self.clone())),
+        }
+    }
+
+    pub fn none(&self) -> Result<(), TokenValueError> {
+        match self {
+            TokenValue::None => Ok(()),
+            _ => Err(TokenValueError::ExpectedNone(self.clone())),
+        }
+    }
+}
 pub trait TokenType: Display + Debug {
     fn token_type(&self) -> Token;
 

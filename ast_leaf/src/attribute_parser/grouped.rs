@@ -134,8 +134,21 @@ impl GroupOrElement {
 
     pub fn hydrate(self, name: &str, ty: Type) -> GroupOrElement {
         match self {
-            GroupOrElement::ProductionToken(token) => {
-                GroupOrElement::ProductionToken(token.hydrate(name, ty.clone()))
+            GroupOrElement::ProductionToken(ProductionToken::NonTerminal(
+                NonTerminal::Unhydrated(unhydrated),
+            )) => {
+                let type_ident = Ident::new(&unhydrated.name, unhydrated.span);
+                let ty = Type::Verbatim(quote! { #type_ident });
+                GroupOrElement::ProductionToken(ProductionToken::NonTerminal(
+                    NonTerminal::Hydrated(HydratedNonTerminal {
+                        name: to_snake_case(&unhydrated.name),
+                        span: unhydrated.span,
+                        ty,
+                    }),
+                ))
+            }
+            GroupOrElement::ProductionToken(production_token) => {
+                GroupOrElement::ProductionToken(production_token.hydrate(name, ty.clone(), false))
             }
             GroupOrElement::InGroupProduction(production) => {
                 GroupOrElement::InGroupProduction(production.hydrate(name, ty.clone()))
@@ -195,7 +208,11 @@ impl GroupedOr {
         GroupedOr { elements }
     }
 
-    pub fn get_parse_sentence(&self, enum_name: &str) -> TokenStream {
+    pub fn get_parse_sentence(
+        &self,
+        enum_name: &str,
+        type_variant_ident: Option<&Ident>,
+    ) -> TokenStream {
         let peek1 = self.elements.iter().map(|element| element.get_peek1());
         let match_tokens: Vec<TokenStream> = self
             .elements
@@ -209,6 +226,10 @@ impl GroupedOr {
             .map(|element| element.get_enum_sentence())
             .collect();
 
+        let default_type_variant_ident = Ident::new("type_variant", Span::call_site());
+
+        let type_variant_ident = type_variant_ident.unwrap_or(&default_type_variant_ident);
+
         let mut i: usize = 0;
         let if_tokens = peek1.map(|peek| {
             let match_token = &match_tokens[i];
@@ -217,7 +238,7 @@ impl GroupedOr {
             quote! {
                 if #peek {
                     #match_token
-                    type_variant = #enum_name_ident::#enum_variant;
+                    #type_variant_ident = #enum_name_ident::#enum_variant;
                 }
             }
         });
@@ -303,57 +324,106 @@ impl Group {
         return quote! {};
     }
 
-    fn get_parse_option(&self) -> TokenStream {
+    fn get_parse_star(&self, enum_name: &str) -> TokenStream {
         let non_terminal = self.non_terminal.as_ref();
         if non_terminal.is_none() {
+            return quote! {};
+        }
+        let or_elements = self.or_elements.as_ref();
+        if or_elements.is_none() {
             return quote! {};
         }
         let non_terminal = non_terminal.unwrap();
         let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
         let non_terminal_type = non_terminal.get_type();
-        let peek_sentence = non_terminal.get_peek1();
+        let peek_sentence = or_elements
+            .map(|or_elements| or_elements.get_peek1())
+            .unwrap_or(non_terminal.get_peek1());
+        let type_variant_ident = Ident::new("current_type_variant", Span::call_site());
+        let or_elements_parse_sentence = or_elements
+            .map(|or_elements| or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident)))
+            .unwrap_or(quote! {});
+        let enum_ident = Ident::new(enum_name, Span::call_site());
+        quote! {
+            let mut #non_terminal_name = std::collections::LinkedList::new();
+            while #peek_sentence {
+                let mut #type_variant_ident = #enum_ident::None;
+                #or_elements_parse_sentence
+                let nt = input.parse::<#non_terminal_type>()?;
+                #non_terminal_name.push_back((#type_variant_ident, nt));
+            }
+            let #non_terminal_name: Vec<_> = #non_terminal_name.into_iter().collect();
+        }
+    }
+
+    fn get_parse_plus(&self, enum_name: &str) -> TokenStream {
+        let non_terminal = self.non_terminal.as_ref();
+        if non_terminal.is_none() {
+            return quote! {};
+        }
+        let or_elements = self.or_elements.as_ref();
+        if or_elements.is_none() {
+            return quote! {};
+        }
+        let non_terminal = non_terminal.unwrap();
+        let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
+        let non_terminal_type = non_terminal.get_type();
+        let peek_sentence = or_elements
+            .map(|or_elements| or_elements.get_peek1())
+            .unwrap_or(non_terminal.get_peek1());
+        let type_variant_ident = Ident::new("current_type_variant", Span::call_site());
+        let or_elements_parse_sentence = or_elements
+            .map(|or_elements| or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident)))
+            .unwrap_or(quote! {});
+        let enum_ident = Ident::new(enum_name, Span::call_site());
+        quote! {
+            let mut #non_terminal_name = std::collections::LinkedList::new();
+            {
+                let mut #type_variant_ident = #enum_ident::None;
+                #or_elements_parse_sentence
+                let nt = input.parse::<#non_terminal_type>()?;
+                #non_terminal_name.push_back((#type_variant_ident, nt));
+            }
+            while #peek_sentence {
+                let mut #type_variant_ident = #enum_ident::None;
+                #or_elements_parse_sentence
+                let nt = input.parse::<#non_terminal_type>()?;
+                #non_terminal_name.push_back((#type_variant_ident, nt));
+            }
+            let #non_terminal_name: Vec<_> = #non_terminal_name.into_iter().collect();
+        }
+    }
+
+    fn get_parse_question(&self, enum_name: &str) -> TokenStream {
+        let non_terminal = self.non_terminal.as_ref();
+        if non_terminal.is_none() {
+            return quote! {};
+        }
+        let or_elements = self.or_elements.as_ref();
+        if or_elements.is_none() {
+            return quote! {};
+        }
+        let non_terminal = non_terminal.unwrap();
+        let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
+        let non_terminal_type = non_terminal.get_type();
+        let peek_sentence = or_elements
+            .map(|or_elements| or_elements.get_peek1())
+            .unwrap_or(non_terminal.get_peek1());
+        let type_variant_ident = Ident::new("current_type_variant", Span::call_site());
+        let or_elements_parse_sentence = or_elements
+            .map(|or_elements| or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident)))
+            .unwrap_or(quote! {});
+        let enum_ident = Ident::new(enum_name, Span::call_site());
         quote! {
             let mut #non_terminal_name = None;
+            let mut #type_variant_ident = #enum_ident::None;
             if #peek_sentence {
+                #or_elements_parse_sentence
                 #non_terminal_name = Some(input.parse::<#non_terminal_type>()?);
             }
-        }
-    }
+            type_variant = #type_variant_ident;
 
-    fn get_parse_star(&self) -> TokenStream {
-        let non_terminal = self.non_terminal.as_ref();
-        if non_terminal.is_none() {
-            return quote! {};
-        }
-        let non_terminal = non_terminal.unwrap();
-        let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
-        let non_terminal_type = non_terminal.get_type();
-        let peek_sentence = non_terminal.get_peek1();
-        quote! {
-            let mut #non_terminal_name = std::collections::LinkedList::new();
-            while #peek_sentence {
-                #non_terminal_name.push_back(input.parse::<#non_terminal_type>()?);
-            }
-            let #non_terminal_name: Vec<_> = #non_terminal_name.into_iter().collect();
-        }
-    }
 
-    fn get_parse_plus(&self) -> TokenStream {
-        let non_terminal = self.non_terminal.as_ref();
-        if non_terminal.is_none() {
-            return quote! {};
-        }
-        let non_terminal = non_terminal.unwrap();
-        let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
-        let non_terminal_type = non_terminal.get_type();
-        let peek_sentence = non_terminal.get_peek1();
-        quote! {
-            let mut #non_terminal_name = std::collections::LinkedList::new();
-            #non_terminal_name.push_back(input.parse::<#non_terminal_type>()?);
-            while #peek_sentence {
-                #non_terminal_name.push_back(input.parse::<#non_terminal_type>()?);
-            }
-            let #non_terminal_name: Vec<_> = #non_terminal_name.into_iter().collect();
         }
     }
 
@@ -364,7 +434,7 @@ impl Group {
             .unwrap_or(quote! {})
     }
 
-    pub fn hydrate(self, name: &str, ty: Type) -> Group {
+    pub fn hydrate(self, name: &str, ty: Type, enum_name: &str) -> Group {
         let is_non_terminal = self
             .non_terminal
             .as_ref()
@@ -375,11 +445,10 @@ impl Group {
         if is_non_terminal {
             let type_wrapper = TypeWrapper::new(&type_to_hydrate);
             match self.postfix {
-                GroupPostfix::Star => {
-                    type_to_hydrate = type_wrapper.validate_type("Vec", 0);
-                }
-                GroupPostfix::Plus => {
-                    type_to_hydrate = type_wrapper.validate_type("Vec", 0);
+                GroupPostfix::Star | GroupPostfix::Plus => {
+                    let inner_tuple = type_wrapper.validate_type("Vec", 0);
+                    type_to_hydrate =
+                        TypeWrapper::new(&inner_tuple).validate_dual_tuple(enum_name, None);
                 }
                 GroupPostfix::Question => {
                     type_to_hydrate = type_wrapper.validate_type("Option", 0);
@@ -393,7 +462,7 @@ impl Group {
             .map(|or_elements| or_elements.hydrate(name, type_to_hydrate.clone()));
         let non_terminal = self
             .non_terminal
-            .map(|non_terminal| non_terminal.hydrate(name, type_to_hydrate.clone()));
+            .map(|non_terminal| non_terminal.hydrate(name, type_to_hydrate.clone(), false));
         Group {
             or_elements,
             non_terminal,
@@ -401,22 +470,26 @@ impl Group {
         }
     }
 
-    pub fn get_parse_sentence(&self, enum_name: &str) -> TokenStream {
+    pub fn get_parse_no_postfix(&self, enum_name: &str) -> TokenStream {
         let or_elements = self
             .or_elements
             .as_ref()
-            .map(|or_elements| or_elements.get_parse_sentence(enum_name))
+            .map(|or_elements| or_elements.get_parse_sentence(enum_name, None))
             .unwrap_or(quote! {});
-        let non_terminal = match &self.postfix {
-            GroupPostfix::Star => self.get_parse_star(),
-            GroupPostfix::Plus => self.get_parse_plus(),
-            GroupPostfix::Question => self.get_parse_option(),
-            GroupPostfix::None => self.get_parse_non_terminal(),
-        };
-        return quote! {
+        let non_terminal = self.get_parse_non_terminal();
+        quote! {
             #or_elements
             #non_terminal
-        };
+        }
+    }
+
+    pub fn get_parse_sentence(&self, enum_name: &str) -> TokenStream {
+        match &self.postfix {
+            GroupPostfix::Star => self.get_parse_star(enum_name),
+            GroupPostfix::Plus => self.get_parse_plus(enum_name),
+            GroupPostfix::Question => self.get_parse_question(enum_name),
+            GroupPostfix::None => self.get_parse_no_postfix(enum_name),
+        }
     }
 
     pub fn get_peek1(&self) -> TokenStream {

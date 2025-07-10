@@ -24,7 +24,7 @@ impl ProductionTokenChain {
         let tokens = self
             .tokens
             .into_iter()
-            .map(|token| token.hydrate(name, ty.clone()))
+            .map(|token| token.hydrate(name, ty.clone(), false))
             .collect();
         ProductionTokenChain { tokens }
     }
@@ -79,9 +79,11 @@ impl ProductionItem {
         }
     }
 
-    pub fn hydrate(self, name: &str, ty: Type) -> ProductionItem {
+    pub fn hydrate(self, name: &str, ty: Type, enum_name: &str) -> ProductionItem {
         match self {
-            ProductionItem::Group(group) => ProductionItem::Group(group.hydrate(name, ty.clone())),
+            ProductionItem::Group(group) => {
+                ProductionItem::Group(group.hydrate(name, ty.clone(), enum_name))
+            }
             ProductionItem::ProductionTokenChain(production_token_chain) => {
                 ProductionItem::ProductionTokenChain(
                     production_token_chain.hydrate(name, ty.clone()),
@@ -136,10 +138,26 @@ impl Production {
             .iter()
             .map(|item| item.get_enum_field())
             .collect();
-        if items_tokens.is_empty() {
-            return quote! {};
+
+        let mut all_tokens_empty = true;
+        for tokens in &items_tokens {
+            if !tokens.is_empty() {
+                all_tokens_empty = false;
+                break;
+            }
         }
+
         let enum_name_ident = Ident::new(enum_name, Span::call_site());
+
+        if all_tokens_empty {
+            return quote! {
+                #[derive(Debug, PartialEq, Eq, Clone)]
+                pub enum #enum_name_ident {
+                    None,
+                }
+            };
+        }
+
         return quote! {
             #[derive(Debug, PartialEq, Eq, Clone)]
             pub enum #enum_name_ident {
@@ -149,11 +167,11 @@ impl Production {
         };
     }
 
-    pub fn hydrate(self, name: &str, ty: Type) -> Production {
+    pub fn hydrate(self, name: &str, ty: Type, enum_name: &str) -> Production {
         let items = self
             .items
             .into_iter()
-            .map(|item| item.hydrate(name, ty.clone()))
+            .map(|item| item.hydrate(name, ty.clone(), enum_name))
             .collect();
         Production { items }
     }

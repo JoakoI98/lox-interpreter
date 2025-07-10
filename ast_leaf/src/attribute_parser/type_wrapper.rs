@@ -17,6 +17,33 @@ impl<'a> TypeWrapper<'a> {
         }
     }
 
+    pub fn validate_dual_tuple(&self, first_type: &str, second_type: Option<&str>) -> Type {
+        let tuple_type = match &self.type_ {
+            Type::Tuple(tuple) => tuple,
+            _ => panic!("Dual tuple expected"),
+        };
+        if tuple_type.elems.len() != 2 {
+            panic!("Dual tuple expected");
+        };
+
+        let first_type_wrapper = TypeWrapper::new(&tuple_type.elems[0]);
+        let second_type_wrapper = TypeWrapper::new(&tuple_type.elems[1]);
+        let first_type_check = first_type_wrapper.get_type_name() == Some(first_type.to_string());
+        let second_type_check = second_type.is_none()
+            || (second_type_wrapper.get_type_name() == Some(second_type.unwrap().to_string()));
+        let result = first_type_check && second_type_check;
+        if !result {
+            panic!(
+                "{} or {} type expected, got {:?} and {:?}",
+                first_type,
+                second_type.unwrap_or("None"),
+                first_type_wrapper.get_type_name(),
+                second_type_wrapper.get_type_name()
+            );
+        }
+        tuple_type.elems[1].clone()
+    }
+
     pub fn validate_type(&self, expected_type: &str, inner_type_index: usize) -> Type {
         if self.get_type_name() != Some(expected_type.to_string()) {
             panic!(

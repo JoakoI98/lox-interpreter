@@ -1,6 +1,8 @@
-use std::fmt::{format, Display};
+use std::fmt::Display;
 
-pub use super::token_type::{ArrangedTokens, Token as TokenEnum, TokenType, TokenValue};
+use crate::tokenizer::token::token_type::TokenValueError;
+
+pub use super::token_type::{Token as TokenEnum, TokenType, TokenValue};
 use super::Token;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -58,8 +60,19 @@ impl FromIterator<Token> for Vec<StaticToken> {
     }
 }
 
+impl From<TokenValueError> for std::fmt::Error {
+    fn from(_: TokenValueError) -> Self {
+        std::fmt::Error::default()
+    }
+}
+
 impl Display for StaticToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.string_display)
+        match self.token_type {
+            TokenEnum::Number => write!(f, "{:?}", self.token_value.number()?),
+            TokenEnum::String => write!(f, "{}", self.token_value.string()?),
+            TokenEnum::Identifier => write!(f, "{}", self.token_value.identifier()?),
+            _ => write!(f, "{}", self.string_display),
+        }
     }
 }
