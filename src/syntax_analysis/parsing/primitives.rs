@@ -5,7 +5,7 @@ macro_rules! impl_display_debug_for_token {
         $(
             #[derive(Debug, PartialEq, Clone)]
             pub struct $struct_name {
-                token: crate::tokenizer::Token,
+                pub token: crate::tokenizer::Token,
             }
 
             impl crate::syntax_analysis::parsing::parse_stream::Parser for $struct_name {

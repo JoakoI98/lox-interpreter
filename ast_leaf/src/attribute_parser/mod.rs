@@ -151,7 +151,7 @@ impl Production {
 
         if all_tokens_empty {
             return quote! {
-                #[derive(Debug, PartialEq, Eq, Clone)]
+                #[derive(Debug, PartialEq, Clone)]
                 pub enum #enum_name_ident {
                     None,
                 }
@@ -159,7 +159,7 @@ impl Production {
         }
 
         return quote! {
-            #[derive(Debug, PartialEq, Eq, Clone)]
+            #[derive(Debug, PartialEq, Clone)]
             pub enum #enum_name_ident {
                 #(#items_tokens)*,
                 None,
@@ -193,6 +193,17 @@ impl Production {
 
         let peek1 = self.items[0].get_peek1();
 
+        let token_list_field_definition = struct_ast.token_list_field.as_ref().map_or_else(
+            || {
+                quote! {}
+            },
+            |ident| {
+                quote! {
+                    let #ident: Vec<crate::tokenizer::Token> = tokens_list.into_iter().collect();
+                }
+            },
+        );
+
         let items = self
             .items
             .iter()
@@ -203,7 +214,9 @@ impl Production {
 
                 fn parse(input: &mut ParseStream) -> Result<Self> {
                     let mut type_variant = #type_field_type_ident::None ;
+                    let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
                     #(#items)*
+                    #token_list_field_definition
                     std::result::Result::Ok(Self {
                         #type_field_ident: type_variant,
                         #(#non_terminal_fields),*

@@ -76,7 +76,7 @@ impl ToTokens for Terminal {
 impl Terminal {
     pub fn get_parse_sentence(&self) -> TokenStream {
         let ident = Ident::new(&self.value, Span::call_site());
-        quote! { input.parse::<#ident>()?;}
+        quote! { tokens_list.push_back(input.parse::<#ident>()?.token.clone());}
     }
 
     pub fn get_peek1(&self) -> TokenStream {
