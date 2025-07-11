@@ -23,7 +23,7 @@ pub struct PrimaryExpression {
 impl Display for PrimaryExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.token_type {
-            PrimaryExpressionType::Expression(expr) => write!(f, "{}", expr),
+            PrimaryExpressionType::Expression(expr) => write!(f, "(group {})", expr),
             _ => {
                 let token = self.token_list.first().ok_or(std::fmt::Error)?;
                 write!(f, "{}", token)
@@ -51,12 +51,36 @@ pub struct UnaryExpressionOr {
     pub token_type: UnaryExpressionOrType,
 }
 
+impl Display for UnaryExpressionOr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.token_type {
+            UnaryExpressionOrType::UnaryExpressionReference(_) => write!(f, "TEST"),
+            UnaryExpressionOrType::PrimaryExpression(expr) => write!(f, "{}", expr),
+            _ => write!(f, ""),
+        }
+    }
+}
+
 #[ast_leaf(("!" | "-") expr)]
 #[derive(Debug, PartialEq, Clone)]
 pub struct UnaryExpression {
     #[Type]
     pub token_type: UnaryExpressionType,
     pub expr: UnaryExpressionOr,
+    #[TokenList]
+    pub token_list: Vec<Token>,
+}
+
+impl Display for UnaryExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.token_type {
+            UnaryExpressionType::None => write!(f, "{}", self.expr),
+            _ => {
+                let token = self.token_list.first().ok_or(std::fmt::Error)?;
+                write!(f, "({} {})", token, self.expr)
+            }
+        }
+    }
 }
 
 #[ast_leaf(main_unary (("/" | "*") unaries)*)]
@@ -68,6 +92,21 @@ pub struct Factor {
     pub unaries: Vec<(FactorType, UnaryExpression)>,
 }
 
+impl Display for Factor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let operations = self.unaries.iter().map(|(t, unary)| {
+            let token_str: &'static str = match t {
+                FactorType::None => "",
+                FactorType::Slash => "/",
+                FactorType::Star => "*",
+            };
+            (token_str, unary.to_string())
+        });
+        let result = operation_display(self.main_unary.to_string().as_str(), operations);
+        write!(f, "{}", result)
+    }
+}
+
 #[ast_leaf(main_factor (("-" | "+") factors)*)]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Term {
@@ -75,6 +114,21 @@ pub struct Term {
     pub token_type: TermType,
     pub main_factor: Factor,
     pub factors: Vec<(TermType, Factor)>,
+}
+
+impl Display for Term {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let operations = self.factors.iter().map(|(t, factor)| {
+            let token_str: &'static str = match t {
+                TermType::None => "",
+                TermType::Minus => "-",
+                TermType::Plus => "+",
+            };
+            (token_str, factor.to_string())
+        });
+        let result = operation_display(self.main_factor.to_string().as_str(), operations);
+        write!(f, "{}", result)
+    }
 }
 
 #[ast_leaf(main_term (("<" | "<=" | ">" | ">=") terms)*)]
@@ -86,6 +140,23 @@ pub struct Comparison {
     pub terms: Vec<(ComparisonType, Term)>,
 }
 
+impl Display for Comparison {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let operations = self.terms.iter().map(|(t, term)| {
+            let token_str: &'static str = match t {
+                ComparisonType::None => "",
+                ComparisonType::Less => "<",
+                ComparisonType::LessEqual => "<=",
+                ComparisonType::Greater => ">",
+                ComparisonType::GreaterEqual => ">=",
+            };
+            (token_str, term.to_string())
+        });
+        let result = operation_display(self.main_term.to_string().as_str(), operations);
+        write!(f, "{}", result)
+    }
+}
+
 #[ast_leaf(main_comparison (("==" | "!=") comparisons)*)]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Equality {
@@ -95,7 +166,22 @@ pub struct Equality {
     pub comparisons: Vec<(EqualityType, Comparison)>,
 }
 
-type Expression = Box<Equality>;
+impl Display for Equality {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let operations = self.comparisons.iter().map(|(t, comparison)| {
+            let token_str: &'static str = match t {
+                EqualityType::None => "",
+                EqualityType::EqualEqual => "==",
+                EqualityType::BangEqual => "!=",
+            };
+            (token_str, comparison.to_string())
+        });
+        let result = operation_display(self.main_comparison.to_string().as_str(), operations);
+        write!(f, "{}", result)
+    }
+}
+
+pub type Expression = Box<Equality>;
 impl Parser for Expression {
     fn parse(input: &mut ParseStream) -> Result<Self> {
         let equality = input.parse::<Equality>()?;
@@ -107,8 +193,13 @@ impl Parser for Expression {
     }
 }
 
-impl Display for Expression {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "EXPR")
+fn operation_display<T: Iterator<Item = (&'static str, std::string::String)>>(
+    initial: &str,
+    operations: T,
+) -> std::string::String {
+    let mut result = initial.to_string();
+    for (op, next) in operations {
+        result = format!("({} {} {})", op, result, next);
     }
+    result
 }
