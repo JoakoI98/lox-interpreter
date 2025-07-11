@@ -1,4 +1,4 @@
-use super::parse_error::{ExpectedEnum, ParseError, Result};
+use super::parse_error::{ExpectedEnum, NoTokenError, ParseError, Result, UnexpectedTokenError};
 
 macro_rules! impl_display_debug_for_token {
     ($($struct_name:ident),*) => {
@@ -10,9 +10,11 @@ macro_rules! impl_display_debug_for_token {
 
             impl crate::syntax_analysis::parsing::parse_stream::Parser for $struct_name {
                 fn parse(input: &mut crate::syntax_analysis::parsing::parse_stream::ParseStream) -> Result<Self> {
-                    let token = input.advance().ok_or(ParseError::no_token(
-                        ExpectedEnum::Token(crate::tokenizer::TokenEnum::$struct_name),
-                        None,
+                    let token = input.advance().ok_or(ParseError::NoToken(
+                        NoTokenError::no_token(
+                            ExpectedEnum::Token(crate::tokenizer::TokenEnum::$struct_name),
+                            None,
+                        ),
                     ))?;
                     token.parse(crate::tokenizer::TokenEnum::$struct_name)?;
                     Ok($struct_name {
@@ -44,7 +46,13 @@ impl crate::tokenizer::Token {
         if self.peek(expected) {
             Ok(self)
         } else {
-            Err(ParseError::unexpected_token(self.clone(), expected, None))
+            Err(ParseError::UnexpectedToken(
+                UnexpectedTokenError::unexpected_token(
+                    self.clone(),
+                    ExpectedEnum::Token(expected),
+                    None,
+                ),
+            ))
         }
     }
 

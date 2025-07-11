@@ -7,7 +7,7 @@ use parsing::primitives::{
     Bang, BangEqual, EqualEqual, False, Greater, GreaterEqual, LeftParen, Less, LessEqual, Minus,
     Nil, Number, Plus, RightParen, Slash, Star, String, True,
 };
-pub use parsing::{ParseStream, Parser, Result};
+pub use parsing::{ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError};
 
 use crate::tokenizer::Token;
 

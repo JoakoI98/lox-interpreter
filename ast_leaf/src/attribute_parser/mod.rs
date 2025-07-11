@@ -204,6 +204,20 @@ impl Production {
             },
         );
 
+        let mut remap_error_tokens = quote! {};
+        if let Some(remap_error) = &struct_ast.remap_error {
+            remap_error_tokens = quote! {
+                    .map_err(|e| {
+                        let token = e.found_token();
+                        if let Some(token) = token {
+                            ParseError::UnexpectedToken(UnexpectedTokenError::unexpected_token(token, ExpectedEnum::NonTerminal(#remap_error .to_string()), None))
+                        } else {
+                            e
+                        }
+                    })
+            };
+        }
+
         let items = self
             .items
             .iter()
@@ -212,15 +226,19 @@ impl Production {
 
             impl Parser for #struct_name_ident {
 
-                fn parse(input: &mut ParseStream) -> Result<Self> {
-                    let mut type_variant = #type_field_type_ident::None ;
-                    let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
-                    #(#items)*
-                    #token_list_field_definition
-                    std::result::Result::Ok(Self {
-                        #type_field_ident: type_variant,
-                        #(#non_terminal_fields),*
-                    })
+                fn parse(input: &mut ParseStream) -> Result<#struct_name_ident> {
+                    fn do_parse(input: &mut ParseStream) -> Result<#struct_name_ident> {
+                        let mut type_variant = #type_field_type_ident::None ;
+                        let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
+                        #(#items)*
+                        #token_list_field_definition
+                        std::result::Result::Ok(#struct_name_ident {
+                            #type_field_ident: type_variant,
+                            #(#non_terminal_fields),*
+                        })
+                    }
+
+                    do_parse(input) #remap_error_tokens
                 }
 
                 fn peek(input: &ParseStream) -> bool {

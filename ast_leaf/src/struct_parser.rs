@@ -12,10 +12,12 @@ pub struct ASTLeafStruct {
     struct_ast: ItemStruct,
     pub non_terminal_fields: Vec<(String, Type)>,
     pub token_list_field: Option<Ident>,
+    pub remap_error: Option<syn::LitStr>,
 }
 
 const TYPE_FIELD_ATTR: &str = "Type";
 const TOKEN_LIST_FIELD_ATTR: &str = "TokenList";
+const REMAPPED_ERROR_ATTR: &str = "SyncError";
 
 impl Parse for ASTLeafStruct {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -106,6 +108,38 @@ impl Parse for ASTLeafStruct {
 
         let token_list_field = token_field.map(|f| f.ident.clone()).flatten();
 
+        let mut remap_error = None;
+
+        let remap_attrs: Vec<_> = struct_ast
+            .attrs
+            .into_iter()
+            .filter(|attr| {
+                let meta_attr = attr.meta.require_name_value();
+                if let Ok(meta_attr) = meta_attr {
+                    let is_remap_error = meta_attr
+                        .path
+                        .segments
+                        .iter()
+                        .any(|s| s.ident.to_string() == REMAPPED_ERROR_ATTR);
+                    if !is_remap_error {
+                        return true;
+                    }
+                    match &meta_attr.value {
+                        syn::Expr::Lit(expr_lit) => match &expr_lit.lit {
+                            syn::Lit::Str(lit_str) => {
+                                remap_error = Some(lit_str.clone());
+                                return false;
+                            }
+                            _ => panic!("Remapped error attribute must be a string"),
+                        },
+                        _ => panic!("Remapped error attribute must be a string"),
+                    }
+                }
+                return true;
+            })
+            .collect();
+        struct_ast.attrs = remap_attrs;
+
         Ok(ASTLeafStruct {
             name,
             type_field: type_field_name,
@@ -113,6 +147,7 @@ impl Parse for ASTLeafStruct {
             struct_ast,
             non_terminal_fields: t,
             token_list_field,
+            remap_error,
         })
     }
 }

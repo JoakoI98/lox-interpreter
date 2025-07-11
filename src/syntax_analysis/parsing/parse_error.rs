@@ -2,10 +2,13 @@ use std::fmt::Display;
 
 use crate::tokenizer::{Token, TokenEnum};
 
+use thiserror::Error;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum ExpectedEnum {
     Token(TokenEnum),
     Tokens(Vec<TokenEnum>),
+    NonTerminal(String),
     Unknown,
 }
 
@@ -13,6 +16,7 @@ impl Display for ExpectedEnum {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ExpectedEnum::Token(token) => write!(f, "Expected: '{}'", token),
+            ExpectedEnum::NonTerminal(non_terminal) => write!(f, "Expected: '{}'", non_terminal),
             ExpectedEnum::Tokens(tokens) => {
                 let expected_tokens_string = tokens
                     .iter()
@@ -60,17 +64,20 @@ impl Display for UnexpectedTokenError {
     }
 }
 
+impl std::error::Error for UnexpectedTokenError {}
+
 impl UnexpectedTokenError {
-    pub fn unexpected_token(token: Token, expected: TokenEnum, message: Option<String>) -> Self {
+    pub fn unexpected_token(token: Token, expected: ExpectedEnum, message: Option<String>) -> Self {
         Self {
             message: message,
-            expected: ExpectedEnum::Token(expected),
+            expected,
             token,
         }
     }
 }
 
-struct NoTokenError {
+#[derive(Debug, PartialEq, Clone)]
+pub struct NoTokenError {
     expected: ExpectedEnum,
     message: Option<String>,
 }
@@ -102,30 +109,23 @@ impl NoTokenError {
     }
 }
 
+impl std::error::Error for NoTokenError {}
+
+#[derive(Error, Debug)]
 pub enum ParseError {
-    UnexpectedToken(UnexpectedTokenError),
-    NoToken(NoTokenError),
-}
-
-impl Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseError::UnexpectedToken(error) => write!(f, "{}", error),
-            ParseError::NoToken(error) => write!(f, "{}", error),
-        }
-    }
-}
-
-impl ParseError {
-    pub fn unexpected_token(token: Token, expected: TokenEnum, message: Option<String>) -> Self {
-        Self::UnexpectedToken(UnexpectedTokenError::unexpected_token(
-            token, expected, message,
-        ))
-    }
-
-    pub fn no_token(expected: ExpectedEnum, message: Option<String>) -> Self {
-        Self::NoToken(NoTokenError::no_token(expected, message))
-    }
+    #[error("{0}")]
+    UnexpectedToken(#[from] UnexpectedTokenError),
+    #[error("{0}")]
+    NoToken(#[from] NoTokenError),
 }
 
 pub type Result<T> = std::result::Result<T, ParseError>;
+
+impl ParseError {
+    pub fn found_token(&self) -> Option<Token> {
+        match self {
+            ParseError::UnexpectedToken(error) => Some(error.token.clone()),
+            ParseError::NoToken(_) => None,
+        }
+    }
+}

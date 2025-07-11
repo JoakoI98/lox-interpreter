@@ -231,20 +231,32 @@ impl GroupedOr {
         let type_variant_ident = type_variant_ident.unwrap_or(&default_type_variant_ident);
 
         let mut i: usize = 0;
-        let if_tokens = peek1.map(|peek| {
+        let mut if_tokens = std::collections::LinkedList::<TokenStream>::new();
+
+        for (i, peek) in peek1.enumerate() {
             let match_token = &match_tokens[i];
             let enum_variant = &enum_variants[i];
-            i += 1;
-            quote! {
-                if #peek {
+            let if_statement = if i < self.elements.len() - 1 {
+                quote! {
+                    if #peek
+                }
+            } else {
+                quote! {}
+            };
+            if_tokens.push_back(quote! {
+                #if_statement {
                     #match_token
                     #type_variant_ident = #enum_name_ident::#enum_variant;
                 }
-            }
-        });
+            });
+        }
+
+        let last_if_tokens = if_tokens.pop_back();
+        let if_tokens = if_tokens.into_iter();
 
         return quote! {
             #(#if_tokens)else*
+            else #last_if_tokens
         };
     }
 

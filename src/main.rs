@@ -75,10 +75,9 @@ fn run() {
                 }
                 let mut parse_stream = syntax_analysis::ParseStream::new(tokens);
                 let r = parse_stream.parse::<syntax_analysis::Expression>();
-                if let Ok(r) = r {
-                    println!("{}", r);
-                } else {
-                    println!("Parse failed");
+                match r {
+                    Ok(r) => println!("{}", r),
+                    Err(e) => println!("{}", e),
                 }
             } else {
                 println!("EOF  null"); // Placeholder, replace this line when implementing the scanner
