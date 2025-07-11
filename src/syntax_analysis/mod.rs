@@ -54,7 +54,7 @@ pub struct UnaryExpressionOr {
 impl Display for UnaryExpressionOr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.token_type {
-            UnaryExpressionOrType::UnaryExpressionReference(_) => write!(f, "TEST"),
+            UnaryExpressionOrType::UnaryExpressionReference(expr) => write!(f, "{}", expr),
             UnaryExpressionOrType::PrimaryExpression(expr) => write!(f, "{}", expr),
             _ => write!(f, ""),
         }
