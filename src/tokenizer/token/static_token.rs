@@ -5,7 +5,7 @@ use crate::tokenizer::token::token_type::TokenValueError;
 pub use super::token_type::{Token as TokenEnum, TokenType, TokenValue};
 use super::Token;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub struct StaticToken {
     pub token_type: TokenEnum,
     pub lexeme: String,
@@ -72,7 +72,13 @@ impl Display for StaticToken {
             TokenEnum::Number => write!(f, "{:?}", self.token_value.number()?),
             TokenEnum::String => write!(f, "{}", self.token_value.string()?),
             TokenEnum::Identifier => write!(f, "{}", self.token_value.identifier()?),
-            _ => write!(f, "{}", self.string_display),
+            _ => write!(f, "{}", self.token_type),
         }
+    }
+}
+
+impl std::fmt::Debug for StaticToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.string_display)
     }
 }

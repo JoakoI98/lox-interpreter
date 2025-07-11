@@ -47,7 +47,7 @@ fn run() {
                     eprintln!("{}", error);
                 }
                 for token in &tokens {
-                    println!("{}", token);
+                    println!("{:?}", token);
                 }
                 if !errors.is_empty() {
                     std::process::exit(65);
@@ -76,7 +76,7 @@ fn run() {
                 let mut parse_stream = syntax_analysis::ParseStream::new(tokens);
                 let r = parse_stream.parse::<syntax_analysis::PrimaryExpression>();
                 if let Ok(r) = r {
-                    println!("Parsed successfully {}", r);
+                    println!("{}", r);
                 } else {
                     println!("Parse failed");
                 }
