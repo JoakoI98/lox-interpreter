@@ -1,13 +1,3 @@
-use ast_leaf::ast_leaf;
-
-// #[ast_leaf("+" ("+" | "*" | 0: non_terminal) nt )]
-// pub struct MacroIntegrationTest {
-//     #[Type]
-//     pub testomg: TestType,
-//     pub testomg2: TestType,
-//     pub nt: String,
-// }
-
 mod evaluation;
 mod syntax_analysis;
 mod tokenizer;

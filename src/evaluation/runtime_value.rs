@@ -5,12 +5,6 @@ use std::{
 
 use thiserror::Error;
 
-use crate::syntax_analysis::{
-    Comparison, ComparisonType, Equality, EqualityType, Expression, Factor, FactorType,
-    PrimaryExpression, PrimaryExpressionType, Term, TermType, UnaryExpression, UnaryExpressionSelf,
-    UnaryExpressionSelfType, UnaryExpressionType,
-};
-
 #[derive(Debug, PartialEq)]
 pub enum RuntimeValue {
     Number(f64),

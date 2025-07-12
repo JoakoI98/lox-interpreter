@@ -248,8 +248,4 @@ impl Production {
             }
         }
     }
-
-    pub fn get_peek1(&self) -> TokenStream {
-        self.items[0].get_peek1()
-    }
 }
