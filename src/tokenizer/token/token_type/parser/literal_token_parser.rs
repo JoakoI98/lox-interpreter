@@ -45,9 +45,6 @@ impl LiteralTokenParser {
                     return Some(string);
                 }
             }
-            if c == '\n' {
-                return None;
-            }
         }
         return Some(str[quote_size..].to_string());
     }
