@@ -2,11 +2,13 @@ use std::fmt::{Debug, Display};
 
 use ast_leaf::ast_leaf;
 
-use super::parsing::primitives::{
+use super::super::parsing::primitives::{
     Bang, BangEqual, EqualEqual, False, Greater, GreaterEqual, LeftParen, Less, LessEqual, Minus,
     Nil, Number, Plus, RightParen, Slash, Star, String, True,
 };
-use super::parsing::{ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError};
+use super::super::parsing::{
+    ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError,
+};
 
 use crate::tokenizer::Token;
 

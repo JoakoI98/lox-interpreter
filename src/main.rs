@@ -126,6 +126,46 @@ fn run() {
                 println!("EOF  null"); // Placeholder, replace this line when implementing the scanner
             }
         }
+        "run" => {
+            // You can use print statements as follows for debugging, they'll be visible when running tests.
+            writeln!(io::stderr(), "Logs from your program will appear here!").unwrap();
+
+            let file_contents = fs::read_to_string(filename).unwrap_or_else(|err| {
+                writeln!(io::stderr(), "Failed to read file {}: {}", filename, err).unwrap();
+                String::new()
+            });
+
+            if !file_contents.is_empty() {
+                let (tokens, errors) = scan_tokens(file_contents.as_str());
+                for error in &errors {
+                    eprintln!("{}", error);
+                }
+                if !errors.is_empty() {
+                    std::process::exit(65);
+                }
+                let mut parse_stream = syntax_analysis::ParseStream::new(tokens);
+                let r = parse_stream.parse::<syntax_analysis::Program>();
+                match r {
+                    Ok(r) => {
+                        let r = r.run();
+                        match r {
+                            Err(e) => {
+                                eprintln!("{}", e);
+                                std::process::exit(70);
+                            }
+                            _ => {}
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        std::process::exit(65);
+                    }
+                }
+            } else {
+                println!("EOF  null"); // Placeholder, replace this line when implementing the scanner
+            }
+        }
+
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
         }

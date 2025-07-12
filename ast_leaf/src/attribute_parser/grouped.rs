@@ -336,6 +336,26 @@ impl Group {
         return quote! {};
     }
 
+    fn get_parse_star_non_terminal(&self, enum_name: &str) -> TokenStream {
+        let non_terminal = self.non_terminal.as_ref();
+        if non_terminal.is_none() {
+            return quote! {};
+        }
+        let non_terminal = non_terminal.unwrap();
+        let peek_sentence = non_terminal.get_peek1();
+        let non_terminal_type = non_terminal.get_type();
+        let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
+        let enum_ident = Ident::new(enum_name, Span::call_site());
+        return quote! {
+            let mut #non_terminal_name = std::collections::LinkedList::new();
+            while #peek_sentence {
+                let nt = input.parse::<#non_terminal_type>()?;
+                #non_terminal_name.push_back((#enum_ident::None, nt));
+            }
+            let #non_terminal_name: Vec<_> = #non_terminal_name.into_iter().collect();
+        };
+    }
+
     fn get_parse_star(&self, enum_name: &str) -> TokenStream {
         let non_terminal = self.non_terminal.as_ref();
         if non_terminal.is_none() {
@@ -343,7 +363,7 @@ impl Group {
         }
         let or_elements = self.or_elements.as_ref();
         if or_elements.is_none() {
-            return quote! {};
+            return self.get_parse_star_non_terminal(enum_name);
         }
         let non_terminal = non_terminal.unwrap();
         let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
