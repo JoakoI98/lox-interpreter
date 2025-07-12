@@ -181,7 +181,7 @@ impl PrimaryExpression {
             PrimaryExpressionType::False => Ok(RuntimeValue::Boolean(false)),
             PrimaryExpressionType::True => Ok(RuntimeValue::Boolean(true)),
             PrimaryExpressionType::Nil => Ok(RuntimeValue::Nil),
-            PrimaryExpressionType::Expression(_) => Ok(RuntimeValue::Nil),
+            PrimaryExpressionType::Expression(e) => e.eval(),
             _ => Err(RuntimeError::UnexpectedRuntimeError),
         }
     }
