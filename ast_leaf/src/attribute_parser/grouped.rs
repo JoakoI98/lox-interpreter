@@ -212,6 +212,7 @@ impl GroupedOr {
         &self,
         enum_name: &str,
         type_variant_ident: Option<&Ident>,
+        force_match: bool,
     ) -> TokenStream {
         let peek1 = self.elements.iter().map(|element| element.get_peek1());
         let match_tokens: Vec<TokenStream> = self
@@ -230,13 +231,12 @@ impl GroupedOr {
 
         let type_variant_ident = type_variant_ident.unwrap_or(&default_type_variant_ident);
 
-        let mut i: usize = 0;
         let mut if_tokens = std::collections::LinkedList::<TokenStream>::new();
 
         for (i, peek) in peek1.enumerate() {
             let match_token = &match_tokens[i];
             let enum_variant = &enum_variants[i];
-            let if_statement = if i < self.elements.len() - 1 {
+            let if_statement = if i < self.elements.len() - 1 || !force_match {
                 quote! {
                     if #peek
                 }
@@ -353,7 +353,9 @@ impl Group {
             .unwrap_or(non_terminal.get_peek1());
         let type_variant_ident = Ident::new("current_type_variant", Span::call_site());
         let or_elements_parse_sentence = or_elements
-            .map(|or_elements| or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident)))
+            .map(|or_elements| {
+                or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident), false)
+            })
             .unwrap_or(quote! {});
         let enum_ident = Ident::new(enum_name, Span::call_site());
         quote! {
@@ -385,7 +387,9 @@ impl Group {
             .unwrap_or(non_terminal.get_peek1());
         let type_variant_ident = Ident::new("current_type_variant", Span::call_site());
         let or_elements_parse_sentence = or_elements
-            .map(|or_elements| or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident)))
+            .map(|or_elements| {
+                or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident), true)
+            })
             .unwrap_or(quote! {});
         let enum_ident = Ident::new(enum_name, Span::call_site());
         quote! {
@@ -423,7 +427,9 @@ impl Group {
             .unwrap_or(non_terminal.get_peek1());
         let type_variant_ident = Ident::new("current_type_variant", Span::call_site());
         let or_elements_parse_sentence = or_elements
-            .map(|or_elements| or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident)))
+            .map(|or_elements| {
+                or_elements.get_parse_sentence(enum_name, Some(&type_variant_ident), false)
+            })
             .unwrap_or(quote! {});
         let enum_ident = Ident::new(enum_name, Span::call_site());
         quote! {
@@ -486,7 +492,7 @@ impl Group {
         let or_elements = self
             .or_elements
             .as_ref()
-            .map(|or_elements| or_elements.get_parse_sentence(enum_name, None))
+            .map(|or_elements| or_elements.get_parse_sentence(enum_name, None, true))
             .unwrap_or(quote! {});
         let non_terminal = self.get_parse_non_terminal();
         quote! {

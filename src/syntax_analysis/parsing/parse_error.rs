@@ -15,15 +15,15 @@ pub enum ExpectedEnum {
 impl Display for ExpectedEnum {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ExpectedEnum::Token(token) => write!(f, "Expected: '{}'", token),
-            ExpectedEnum::NonTerminal(non_terminal) => write!(f, "Expected: '{}'", non_terminal),
+            ExpectedEnum::Token(token) => write!(f, "{}", token),
+            ExpectedEnum::NonTerminal(non_terminal) => write!(f, "{}", non_terminal.to_lowercase()),
             ExpectedEnum::Tokens(tokens) => {
                 let expected_tokens_string = tokens
                     .iter()
                     .map(|token| format!("'{}'", token))
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "Expected one of: {}", expected_tokens_string)
+                write!(f, "{}", expected_tokens_string)
             }
             ExpectedEnum::Unknown => write!(f, ""),
         }
@@ -39,27 +39,11 @@ pub struct UnexpectedTokenError {
 
 impl Display for UnexpectedTokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let message_string = self
-            .message
-            .as_ref()
-            .map(|message| format!(" {}: ", message))
-            .unwrap_or("".to_string());
-
-        let expected_string: String;
-        match self.expected {
-            ExpectedEnum::Unknown => {
-                return write!(
-                    f,
-                    "Unexpected token found: '{}'.{}",
-                    self.token.token_type, message_string
-                );
-            }
-            _ => expected_string = self.expected.to_string(),
-        }
+        let expected_string = self.expected.to_string();
         write!(
             f,
-            "{}. Found: '{}'.{}",
-            expected_string, self.token.token_type, message_string
+            "[line {}] Error at '{}': Expect {}.",
+            self.token.line, self.token.lexeme, expected_string
         )
     }
 }

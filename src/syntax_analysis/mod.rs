@@ -44,41 +44,36 @@ impl Parser for UnaryExpressionReference {
     }
 }
 
-#[ast_leaf(((UnaryExpressionReference | PrimaryExpression)))]
+#[ast_leaf((("!" | "-") expr))]
 #[derive(Debug, PartialEq, Clone)]
-pub struct UnaryExpressionOr {
+pub struct UnaryExpressionSelf {
     #[Type]
-    pub token_type: UnaryExpressionOrType,
+    pub token_type: UnaryExpressionSelfType,
+    pub expr: UnaryExpressionReference,
+    #[TokenList]
+    pub token_list: Vec<Token>,
 }
 
-impl Display for UnaryExpressionOr {
+impl Display for UnaryExpressionSelf {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.token_type {
-            UnaryExpressionOrType::UnaryExpressionReference(expr) => write!(f, "{}", expr),
-            UnaryExpressionOrType::PrimaryExpression(expr) => write!(f, "{}", expr),
-            _ => write!(f, ""),
-        }
+        let token = self.token_list.first().ok_or(std::fmt::Error)?;
+        write!(f, "({} {})", token, self.expr)
     }
 }
 
-#[ast_leaf(("!" | "-") expr)]
+#[ast_leaf((UnaryExpressionSelf | PrimaryExpression))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct UnaryExpression {
     #[Type]
     pub token_type: UnaryExpressionType,
-    pub expr: UnaryExpressionOr,
-    #[TokenList]
-    pub token_list: Vec<Token>,
 }
 
 impl Display for UnaryExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.token_type {
-            UnaryExpressionType::None => write!(f, "{}", self.expr),
-            _ => {
-                let token = self.token_list.first().ok_or(std::fmt::Error)?;
-                write!(f, "({} {})", token, self.expr)
-            }
+            UnaryExpressionType::PrimaryExpression(expr) => write!(f, "{}", expr),
+            UnaryExpressionType::UnaryExpressionSelf(expr) => write!(f, "{}", expr),
+            _ => write!(f, ""),
         }
     }
 }
@@ -159,6 +154,7 @@ impl Display for Comparison {
 
 #[ast_leaf(main_comparison (("==" | "!=") comparisons)*)]
 #[derive(Debug, PartialEq, Clone)]
+#[SyncError = "expression"]
 pub struct Equality {
     #[Type]
     pub token_type: EqualityType,

@@ -77,7 +77,10 @@ fn run() {
                 let r = parse_stream.parse::<syntax_analysis::Expression>();
                 match r {
                     Ok(r) => println!("{}", r),
-                    Err(e) => println!("{}", e),
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        std::process::exit(65);
+                    }
                 }
             } else {
                 println!("EOF  null"); // Placeholder, replace this line when implementing the scanner

@@ -5,9 +5,11 @@ mod syntax_analysis {
         mod parse_error {
             use std::fmt::Display;
             use crate::tokenizer::{Token, TokenEnum};
+            use thiserror::Error;
             pub enum ExpectedEnum {
                 Token(TokenEnum),
                 Tokens(Vec<TokenEnum>),
+                NonTerminal(String),
                 Unknown,
             }
             #[automatically_derived]
@@ -26,6 +28,13 @@ mod syntax_analysis {
                             ::core::fmt::Formatter::debug_tuple_field1_finish(
                                 f,
                                 "Tokens",
+                                &__self_0,
+                            )
+                        }
+                        ExpectedEnum::NonTerminal(__self_0) => {
+                            ::core::fmt::Formatter::debug_tuple_field1_finish(
+                                f,
+                                "NonTerminal",
                                 &__self_0,
                             )
                         }
@@ -53,6 +62,10 @@ mod syntax_analysis {
                                 ExpectedEnum::Tokens(__self_0),
                                 ExpectedEnum::Tokens(__arg1_0),
                             ) => __self_0 == __arg1_0,
+                            (
+                                ExpectedEnum::NonTerminal(__self_0),
+                                ExpectedEnum::NonTerminal(__arg1_0),
+                            ) => __self_0 == __arg1_0,
                             _ => true,
                         }
                 }
@@ -68,6 +81,11 @@ mod syntax_analysis {
                         ExpectedEnum::Tokens(__self_0) => {
                             ExpectedEnum::Tokens(::core::clone::Clone::clone(__self_0))
                         }
+                        ExpectedEnum::NonTerminal(__self_0) => {
+                            ExpectedEnum::NonTerminal(
+                                ::core::clone::Clone::clone(__self_0),
+                            )
+                        }
                         ExpectedEnum::Unknown => ExpectedEnum::Unknown,
                     }
                 }
@@ -77,6 +95,9 @@ mod syntax_analysis {
                     match self {
                         ExpectedEnum::Token(token) => {
                             f.write_fmt(format_args!("Expected: \'{0}\'", token))
+                        }
+                        ExpectedEnum::NonTerminal(non_terminal) => {
+                            f.write_fmt(format_args!("Expected: \'{0}\'", non_terminal))
                         }
                         ExpectedEnum::Tokens(tokens) => {
                             let expected_tokens_string = tokens
@@ -175,22 +196,56 @@ mod syntax_analysis {
                     )
                 }
             }
+            impl std::error::Error for UnexpectedTokenError {}
             impl UnexpectedTokenError {
                 pub fn unexpected_token(
                     token: Token,
-                    expected: TokenEnum,
+                    expected: ExpectedEnum,
                     message: Option<String>,
                 ) -> Self {
                     Self {
                         message: message,
-                        expected: ExpectedEnum::Token(expected),
+                        expected,
                         token,
                     }
                 }
             }
-            struct NoTokenError {
+            pub struct NoTokenError {
                 expected: ExpectedEnum,
                 message: Option<String>,
+            }
+            #[automatically_derived]
+            impl ::core::fmt::Debug for NoTokenError {
+                #[inline]
+                fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                    ::core::fmt::Formatter::debug_struct_field2_finish(
+                        f,
+                        "NoTokenError",
+                        "expected",
+                        &self.expected,
+                        "message",
+                        &&self.message,
+                    )
+                }
+            }
+            #[automatically_derived]
+            impl ::core::marker::StructuralPartialEq for NoTokenError {}
+            #[automatically_derived]
+            impl ::core::cmp::PartialEq for NoTokenError {
+                #[inline]
+                fn eq(&self, other: &NoTokenError) -> bool {
+                    self.expected == other.expected && self.message == other.message
+                }
+            }
+            #[automatically_derived]
+            impl ::core::clone::Clone for NoTokenError {
+                #[inline]
+                fn clone(&self) -> NoTokenError {
+                    NoTokenError {
+                        expected: ::core::clone::Clone::clone(&self.expected),
+                        message: ::core::clone::Clone::clone(&self.message),
+                    }
+                }
             }
             impl Display for NoTokenError {
                 fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -230,40 +285,99 @@ mod syntax_analysis {
                     Self { expected, message }
                 }
             }
+            impl std::error::Error for NoTokenError {}
             pub enum ParseError {
-                UnexpectedToken(UnexpectedTokenError),
-                NoToken(NoTokenError),
+                #[error("{0}")]
+                UnexpectedToken(#[from] UnexpectedTokenError),
+                #[error("{0}")]
+                NoToken(#[from] NoTokenError),
             }
-            impl Display for ParseError {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            #[allow(unused_qualifications)]
+            impl std::error::Error for ParseError {
+                fn source(
+                    &self,
+                ) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
+                    use thiserror::__private::AsDynError as _;
+                    #[allow(deprecated)]
                     match self {
-                        ParseError::UnexpectedToken(error) => {
-                            f.write_fmt(format_args!("{0}", error))
+                        ParseError::UnexpectedToken { 0: source, .. } => {
+                            ::core::option::Option::Some(source.as_dyn_error())
                         }
-                        ParseError::NoToken(error) => {
-                            f.write_fmt(format_args!("{0}", error))
+                        ParseError::NoToken { 0: source, .. } => {
+                            ::core::option::Option::Some(source.as_dyn_error())
                         }
                     }
                 }
             }
-            impl ParseError {
-                pub fn unexpected_token(
-                    token: Token,
-                    expected: TokenEnum,
-                    message: Option<String>,
-                ) -> Self {
-                    Self::UnexpectedToken(
-                        UnexpectedTokenError::unexpected_token(token, expected, message),
-                    )
+            #[allow(unused_qualifications)]
+            impl ::core::fmt::Display for ParseError {
+                fn fmt(
+                    &self,
+                    __formatter: &mut ::core::fmt::Formatter,
+                ) -> ::core::fmt::Result {
+                    use thiserror::__private::AsDisplay as _;
+                    #[allow(
+                        unused_variables,
+                        deprecated,
+                        clippy::used_underscore_binding
+                    )]
+                    match self {
+                        ParseError::UnexpectedToken(_0) => {
+                            __formatter.write_fmt(format_args!("{0}", _0.as_display()))
+                        }
+                        ParseError::NoToken(_0) => {
+                            __formatter.write_fmt(format_args!("{0}", _0.as_display()))
+                        }
+                    }
                 }
-                pub fn no_token(
-                    expected: ExpectedEnum,
-                    message: Option<String>,
-                ) -> Self {
-                    Self::NoToken(NoTokenError::no_token(expected, message))
+            }
+            #[allow(unused_qualifications)]
+            impl ::core::convert::From<UnexpectedTokenError> for ParseError {
+                #[allow(deprecated)]
+                fn from(source: UnexpectedTokenError) -> Self {
+                    ParseError::UnexpectedToken {
+                        0: source,
+                    }
+                }
+            }
+            #[allow(unused_qualifications)]
+            impl ::core::convert::From<NoTokenError> for ParseError {
+                #[allow(deprecated)]
+                fn from(source: NoTokenError) -> Self {
+                    ParseError::NoToken { 0: source }
+                }
+            }
+            #[automatically_derived]
+            impl ::core::fmt::Debug for ParseError {
+                #[inline]
+                fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                    match self {
+                        ParseError::UnexpectedToken(__self_0) => {
+                            ::core::fmt::Formatter::debug_tuple_field1_finish(
+                                f,
+                                "UnexpectedToken",
+                                &__self_0,
+                            )
+                        }
+                        ParseError::NoToken(__self_0) => {
+                            ::core::fmt::Formatter::debug_tuple_field1_finish(
+                                f,
+                                "NoToken",
+                                &__self_0,
+                            )
+                        }
+                    }
                 }
             }
             pub type Result<T> = std::result::Result<T, ParseError>;
+            impl ParseError {
+                pub fn found_token(&self) -> Option<Token> {
+                    match self {
+                        ParseError::UnexpectedToken(error) => Some(error.token.clone()),
+                        ParseError::NoToken(_) => None,
+                    }
+                }
+            }
         }
         mod parse_stream {
             use super::parse_error::Result;
@@ -299,7 +413,9 @@ mod syntax_analysis {
             }
         }
         pub mod primitives {
-            use super::parse_error::{ExpectedEnum, ParseError, Result};
+            use super::parse_error::{
+                ExpectedEnum, NoTokenError, ParseError, Result, UnexpectedTokenError,
+            };
             impl crate::tokenizer::Token {
                 #[inline]
                 pub fn parse(
@@ -309,7 +425,15 @@ mod syntax_analysis {
                     if self.peek(expected) {
                         Ok(self)
                     } else {
-                        Err(ParseError::unexpected_token(self.clone(), expected, None))
+                        Err(
+                            ParseError::UnexpectedToken(
+                                UnexpectedTokenError::unexpected_token(
+                                    self.clone(),
+                                    ExpectedEnum::Token(expected),
+                                    None,
+                                ),
+                            ),
+                        )
                     }
                 }
                 #[inline]
@@ -357,9 +481,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::LeftParen),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::LeftParen),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::LeftParen)?;
@@ -419,11 +545,13 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(
-                                    crate::tokenizer::TokenEnum::RightParen,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(
+                                        crate::tokenizer::TokenEnum::RightParen,
+                                    ),
+                                    None,
                                 ),
-                                None,
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::RightParen)?;
@@ -483,9 +611,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::LeftBrace),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::LeftBrace),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::LeftBrace)?;
@@ -545,11 +675,13 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(
-                                    crate::tokenizer::TokenEnum::RightBrace,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(
+                                        crate::tokenizer::TokenEnum::RightBrace,
+                                    ),
+                                    None,
                                 ),
-                                None,
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::RightBrace)?;
@@ -609,9 +741,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Comma),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Comma),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Comma)?;
@@ -671,9 +805,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Dot),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Dot),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Dot)?;
@@ -733,9 +869,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Minus),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Minus),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Minus)?;
@@ -795,9 +933,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Plus),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Plus),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Plus)?;
@@ -857,9 +997,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Semicolon),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Semicolon),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Semicolon)?;
@@ -919,9 +1061,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Slash),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Slash),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Slash)?;
@@ -981,9 +1125,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Star),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Star),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Star)?;
@@ -1043,9 +1189,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Bang),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Bang),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Bang)?;
@@ -1105,9 +1253,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Equal),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Equal),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Equal)?;
@@ -1167,9 +1317,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Greater),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Greater),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Greater)?;
@@ -1229,9 +1381,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Less),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Less),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Less)?;
@@ -1291,9 +1445,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Eof),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Eof),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Eof)?;
@@ -1353,9 +1509,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::BangEqual),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::BangEqual),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::BangEqual)?;
@@ -1415,11 +1573,13 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(
-                                    crate::tokenizer::TokenEnum::EqualEqual,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(
+                                        crate::tokenizer::TokenEnum::EqualEqual,
+                                    ),
+                                    None,
                                 ),
-                                None,
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::EqualEqual)?;
@@ -1479,11 +1639,13 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(
-                                    crate::tokenizer::TokenEnum::GreaterEqual,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(
+                                        crate::tokenizer::TokenEnum::GreaterEqual,
+                                    ),
+                                    None,
                                 ),
-                                None,
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::GreaterEqual)?;
@@ -1545,9 +1707,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::LessEqual),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::LessEqual),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::LessEqual)?;
@@ -1607,9 +1771,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::And),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::And),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::And)?;
@@ -1669,9 +1835,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Class),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Class),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Class)?;
@@ -1731,9 +1899,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Else),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Else),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Else)?;
@@ -1793,9 +1963,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::False),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::False),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::False)?;
@@ -1855,9 +2027,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Fun),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Fun),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Fun)?;
@@ -1917,9 +2091,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::For),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::For),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::For)?;
@@ -1979,9 +2155,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::If),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::If),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::If)?;
@@ -2041,9 +2219,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Nil),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Nil),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Nil)?;
@@ -2103,9 +2283,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Or),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Or),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Or)?;
@@ -2165,9 +2347,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Print),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Print),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Print)?;
@@ -2227,9 +2411,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Return),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Return),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Return)?;
@@ -2289,9 +2475,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Super),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Super),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Super)?;
@@ -2351,9 +2539,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::This),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::This),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::This)?;
@@ -2413,9 +2603,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::True),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::True),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::True)?;
@@ -2475,9 +2667,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Var),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Var),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Var)?;
@@ -2537,9 +2731,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::While),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::While),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::While)?;
@@ -2599,9 +2795,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::Number),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::Number),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Number)?;
@@ -2661,9 +2859,11 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(crate::tokenizer::TokenEnum::String),
-                                None,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(crate::tokenizer::TokenEnum::String),
+                                    None,
+                                ),
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::String)?;
@@ -2723,11 +2923,13 @@ mod syntax_analysis {
                     let token = input
                         .advance()
                         .ok_or(
-                            ParseError::no_token(
-                                ExpectedEnum::Token(
-                                    crate::tokenizer::TokenEnum::Identifier,
+                            ParseError::NoToken(
+                                NoTokenError::no_token(
+                                    ExpectedEnum::Token(
+                                        crate::tokenizer::TokenEnum::Identifier,
+                                    ),
+                                    None,
                                 ),
-                                None,
                             ),
                         )?;
                     token.parse(crate::tokenizer::TokenEnum::Identifier)?;
@@ -2748,7 +2950,7 @@ mod syntax_analysis {
                 }
             }
         }
-        pub use parse_error::Result;
+        pub use parse_error::{ExpectedEnum, ParseError, Result, UnexpectedTokenError};
         pub use parse_stream::ParseStream;
         pub use parse_stream::Parser;
     }
@@ -2756,7 +2958,9 @@ mod syntax_analysis {
         Bang, BangEqual, EqualEqual, False, Greater, GreaterEqual, LeftParen, Less,
         LessEqual, Minus, Nil, Number, Plus, RightParen, Slash, Star, String, True,
     };
-    pub use parsing::{ParseStream, Parser, Result};
+    pub use parsing::{
+        ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError,
+    };
     use crate::tokenizer::Token;
     pub enum PrimaryExpressionType {
         Number,
@@ -2817,15 +3021,6 @@ mod syntax_analysis {
         }
     }
     #[automatically_derived]
-    impl ::core::cmp::Eq for PrimaryExpressionType {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {
-            let _: ::core::cmp::AssertParamIsEq<Expression>;
-        }
-    }
-    #[automatically_derived]
     impl ::core::clone::Clone for PrimaryExpressionType {
         #[inline]
         fn clone(&self) -> PrimaryExpressionType {
@@ -2882,42 +3077,60 @@ mod syntax_analysis {
         }
     }
     impl Parser for PrimaryExpression {
-        fn parse(input: &mut ParseStream) -> Result<Self> {
-            let mut type_variant = PrimaryExpressionType::None;
-            let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
-            if input.peek::<Number>() {
-                tokens_list.push_back(input.parse::<Number>()?.token.clone());
-                type_variant = PrimaryExpressionType::Number;
-            } else if input.peek::<String>() {
-                tokens_list.push_back(input.parse::<String>()?.token.clone());
-                type_variant = PrimaryExpressionType::String;
-            } else if input.peek::<True>() {
-                tokens_list.push_back(input.parse::<True>()?.token.clone());
-                type_variant = PrimaryExpressionType::True;
-            } else if input.peek::<False>() {
-                tokens_list.push_back(input.parse::<False>()?.token.clone());
-                type_variant = PrimaryExpressionType::False;
-            } else if input.peek::<Nil>() {
-                tokens_list.push_back(input.parse::<Nil>()?.token.clone());
-                type_variant = PrimaryExpressionType::Nil;
-            } else if input.peek::<LeftParen>() {
-                tokens_list.push_back(input.parse::<LeftParen>()?.token.clone());
-                let expression = input.parse::<Expression>()?;
-                tokens_list.push_back(input.parse::<RightParen>()?.token.clone());
-                type_variant = PrimaryExpressionType::Expression(expression);
+        fn parse(input: &mut ParseStream) -> Result<PrimaryExpression> {
+            fn do_parse(input: &mut ParseStream) -> Result<PrimaryExpression> {
+                let mut type_variant = PrimaryExpressionType::None;
+                let mut tokens_list: std::collections::LinkedList<
+                    crate::tokenizer::Token,
+                > = std::collections::LinkedList::new();
+                if input.peek::<Number>() {
+                    tokens_list.push_back(input.parse::<Number>()?.token.clone());
+                    type_variant = PrimaryExpressionType::Number;
+                } else if input.peek::<String>() {
+                    tokens_list.push_back(input.parse::<String>()?.token.clone());
+                    type_variant = PrimaryExpressionType::String;
+                } else if input.peek::<True>() {
+                    tokens_list.push_back(input.parse::<True>()?.token.clone());
+                    type_variant = PrimaryExpressionType::True;
+                } else if input.peek::<False>() {
+                    tokens_list.push_back(input.parse::<False>()?.token.clone());
+                    type_variant = PrimaryExpressionType::False;
+                } else if input.peek::<Nil>() {
+                    tokens_list.push_back(input.parse::<Nil>()?.token.clone());
+                    type_variant = PrimaryExpressionType::Nil;
+                } else {
+                    tokens_list.push_back(input.parse::<LeftParen>()?.token.clone());
+                    let expression = input.parse::<Expression>()?;
+                    tokens_list.push_back(input.parse::<RightParen>()?.token.clone());
+                    type_variant = PrimaryExpressionType::Expression(expression);
+                }
+                let token_list: Vec<crate::tokenizer::Token> = tokens_list
+                    .into_iter()
+                    .collect();
+                std::result::Result::Ok(PrimaryExpression {
+                    token_type: type_variant,
+                    token_list,
+                })
             }
-            let token_list: Vec<crate::tokenizer::Token> = tokens_list
-                .into_iter()
-                .collect();
-            std::result::Result::Ok(Self {
-                token_type: type_variant,
-                token_list,
-            })
+            do_parse(input)
         }
         fn peek(input: &ParseStream) -> bool {
             input.peek::<Number>() || input.peek::<String>() || input.peek::<True>()
                 || input.peek::<False>() || input.peek::<Nil>()
                 || input.peek::<LeftParen>()
+        }
+    }
+    impl Display for PrimaryExpression {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match &self.token_type {
+                PrimaryExpressionType::Expression(expr) => {
+                    f.write_fmt(format_args!("(group {0})", expr))
+                }
+                _ => {
+                    let token = self.token_list.first().ok_or(std::fmt::Error)?;
+                    f.write_fmt(format_args!("{0}", token))
+                }
+            }
         }
     }
     type UnaryExpressionReference = Box<UnaryExpression>;
@@ -2983,16 +3196,6 @@ mod syntax_analysis {
         }
     }
     #[automatically_derived]
-    impl ::core::cmp::Eq for UnaryExpressionOrType {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {
-            let _: ::core::cmp::AssertParamIsEq<UnaryExpressionReference>;
-            let _: ::core::cmp::AssertParamIsEq<PrimaryExpression>;
-        }
-    }
-    #[automatically_derived]
     impl ::core::clone::Clone for UnaryExpressionOrType {
         #[inline]
         fn clone(&self) -> UnaryExpressionOrType {
@@ -3036,15 +3239,6 @@ mod syntax_analysis {
         }
     }
     #[automatically_derived]
-    impl ::core::cmp::Eq for UnaryExpressionOr {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {
-            let _: ::core::cmp::AssertParamIsEq<UnaryExpressionOrType>;
-        }
-    }
-    #[automatically_derived]
     impl ::core::clone::Clone for UnaryExpressionOr {
         #[inline]
         fn clone(&self) -> UnaryExpressionOr {
@@ -3054,25 +3248,45 @@ mod syntax_analysis {
         }
     }
     impl Parser for UnaryExpressionOr {
-        fn parse(input: &mut ParseStream) -> Result<Self> {
-            let mut type_variant = UnaryExpressionOrType::None;
-            let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
-            if input.peek::<UnaryExpressionReference>() {
-                let unary_expression_reference = input
-                    .parse::<UnaryExpressionReference>()?;
-                type_variant = UnaryExpressionOrType::UnaryExpressionReference(
-                    unary_expression_reference,
-                );
-            } else if input.peek::<PrimaryExpression>() {
-                let primary_expression = input.parse::<PrimaryExpression>()?;
-                type_variant = UnaryExpressionOrType::PrimaryExpression(
-                    primary_expression,
-                );
+        fn parse(input: &mut ParseStream) -> Result<UnaryExpressionOr> {
+            fn do_parse(input: &mut ParseStream) -> Result<UnaryExpressionOr> {
+                let mut type_variant = UnaryExpressionOrType::None;
+                let mut tokens_list: std::collections::LinkedList<
+                    crate::tokenizer::Token,
+                > = std::collections::LinkedList::new();
+                if input.peek::<UnaryExpressionReference>() {
+                    let unary_expression_reference = input
+                        .parse::<UnaryExpressionReference>()?;
+                    type_variant = UnaryExpressionOrType::UnaryExpressionReference(
+                        unary_expression_reference,
+                    );
+                } else {
+                    let primary_expression = input.parse::<PrimaryExpression>()?;
+                    type_variant = UnaryExpressionOrType::PrimaryExpression(
+                        primary_expression,
+                    );
+                }
+                std::result::Result::Ok(UnaryExpressionOr {
+                    token_type: type_variant,
+                })
             }
-            (/*ERROR*/)
+            do_parse(input)
         }
         fn peek(input: &ParseStream) -> bool {
             input.peek::<UnaryExpressionReference>() || input.peek::<PrimaryExpression>()
+        }
+    }
+    impl Display for UnaryExpressionOr {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match &self.token_type {
+                UnaryExpressionOrType::UnaryExpressionReference(expr) => {
+                    f.write_fmt(format_args!("{0}", expr))
+                }
+                UnaryExpressionOrType::PrimaryExpression(expr) => {
+                    f.write_fmt(format_args!("{0}", expr))
+                }
+                _ => f.write_fmt(format_args!("")),
+            }
         }
     }
     pub enum UnaryExpressionType {
@@ -3106,13 +3320,6 @@ mod syntax_analysis {
         }
     }
     #[automatically_derived]
-    impl ::core::cmp::Eq for UnaryExpressionType {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {}
-    }
-    #[automatically_derived]
     impl ::core::clone::Clone for UnaryExpressionType {
         #[inline]
         fn clone(&self) -> UnaryExpressionType {
@@ -3126,18 +3333,21 @@ mod syntax_analysis {
     pub struct UnaryExpression {
         pub token_type: UnaryExpressionType,
         pub expr: UnaryExpressionOr,
+        pub token_list: Vec<Token>,
     }
     #[automatically_derived]
     impl ::core::fmt::Debug for UnaryExpression {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-            ::core::fmt::Formatter::debug_struct_field2_finish(
+            ::core::fmt::Formatter::debug_struct_field3_finish(
                 f,
                 "UnaryExpression",
                 "token_type",
                 &self.token_type,
                 "expr",
-                &&self.expr,
+                &self.expr,
+                "token_list",
+                &&self.token_list,
             )
         }
     }
@@ -3148,16 +3358,7 @@ mod syntax_analysis {
         #[inline]
         fn eq(&self, other: &UnaryExpression) -> bool {
             self.token_type == other.token_type && self.expr == other.expr
-        }
-    }
-    #[automatically_derived]
-    impl ::core::cmp::Eq for UnaryExpression {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {
-            let _: ::core::cmp::AssertParamIsEq<UnaryExpressionType>;
-            let _: ::core::cmp::AssertParamIsEq<UnaryExpressionOr>;
+                && self.token_list == other.token_list
         }
     }
     #[automatically_derived]
@@ -3167,25 +3368,49 @@ mod syntax_analysis {
             UnaryExpression {
                 token_type: ::core::clone::Clone::clone(&self.token_type),
                 expr: ::core::clone::Clone::clone(&self.expr),
+                token_list: ::core::clone::Clone::clone(&self.token_list),
             }
         }
     }
     impl Parser for UnaryExpression {
-        fn parse(input: &mut ParseStream) -> Result<Self> {
-            let mut type_variant = UnaryExpressionType::None;
-            let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
-            if input.peek::<Bang>() {
-                tokens_list.push_back(input.parse::<Bang>()?.token.clone());
-                type_variant = UnaryExpressionType::Bang;
-            } else if input.peek::<Minus>() {
-                tokens_list.push_back(input.parse::<Minus>()?.token.clone());
-                type_variant = UnaryExpressionType::Minus;
+        fn parse(input: &mut ParseStream) -> Result<UnaryExpression> {
+            fn do_parse(input: &mut ParseStream) -> Result<UnaryExpression> {
+                let mut type_variant = UnaryExpressionType::None;
+                let mut tokens_list: std::collections::LinkedList<
+                    crate::tokenizer::Token,
+                > = std::collections::LinkedList::new();
+                if input.peek::<Bang>() {
+                    tokens_list.push_back(input.parse::<Bang>()?.token.clone());
+                    type_variant = UnaryExpressionType::Bang;
+                } else {
+                    tokens_list.push_back(input.parse::<Minus>()?.token.clone());
+                    type_variant = UnaryExpressionType::Minus;
+                }
+                let expr = input.parse::<UnaryExpressionOr>()?;
+                let token_list: Vec<crate::tokenizer::Token> = tokens_list
+                    .into_iter()
+                    .collect();
+                std::result::Result::Ok(UnaryExpression {
+                    token_type: type_variant,
+                    expr,
+                    token_list,
+                })
             }
-            let expr = input.parse::<UnaryExpressionOr>()?;
-            (/*ERROR*/)
+            do_parse(input)
         }
         fn peek(input: &ParseStream) -> bool {
             input.peek::<Bang>() || input.peek::<Minus>()
+        }
+    }
+    impl Display for UnaryExpression {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match &self.token_type {
+                UnaryExpressionType::None => f.write_fmt(format_args!("{0}", self.expr)),
+                _ => {
+                    let token = self.token_list.first().ok_or(std::fmt::Error)?;
+                    f.write_fmt(format_args!("({0} {1})", token, self.expr))
+                }
+            }
         }
     }
     pub enum FactorType {
@@ -3217,13 +3442,6 @@ mod syntax_analysis {
             let __arg1_discr = ::core::intrinsics::discriminant_value(other);
             __self_discr == __arg1_discr
         }
-    }
-    #[automatically_derived]
-    impl ::core::cmp::Eq for FactorType {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {}
     }
     #[automatically_derived]
     impl ::core::clone::Clone for FactorType {
@@ -3268,17 +3486,6 @@ mod syntax_analysis {
         }
     }
     #[automatically_derived]
-    impl ::core::cmp::Eq for Factor {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {
-            let _: ::core::cmp::AssertParamIsEq<FactorType>;
-            let _: ::core::cmp::AssertParamIsEq<UnaryExpression>;
-            let _: ::core::cmp::AssertParamIsEq<Vec<(FactorType, UnaryExpression)>>;
-        }
-    }
-    #[automatically_derived]
     impl ::core::clone::Clone for Factor {
         #[inline]
         fn clone(&self) -> Factor {
@@ -3290,28 +3497,57 @@ mod syntax_analysis {
         }
     }
     impl Parser for Factor {
-        fn parse(input: &mut ParseStream) -> Result<Self> {
-            let mut type_variant = FactorType::None;
-            let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
-            let main_unary = input.parse::<UnaryExpression>()?;
-            let mut unaries = std::collections::LinkedList::new();
-            while input.peek::<Slash>() || input.peek::<Star>() {
-                let mut current_type_variant = FactorType::None;
-                if input.peek::<Slash>() {
-                    tokens_list.push_back(input.parse::<Slash>()?.token.clone());
-                    current_type_variant = FactorType::Slash;
-                } else if input.peek::<Star>() {
-                    tokens_list.push_back(input.parse::<Star>()?.token.clone());
-                    current_type_variant = FactorType::Star;
+        fn parse(input: &mut ParseStream) -> Result<Factor> {
+            fn do_parse(input: &mut ParseStream) -> Result<Factor> {
+                let mut type_variant = FactorType::None;
+                let mut tokens_list: std::collections::LinkedList<
+                    crate::tokenizer::Token,
+                > = std::collections::LinkedList::new();
+                let main_unary = input.parse::<UnaryExpression>()?;
+                let mut unaries = std::collections::LinkedList::new();
+                while input.peek::<Slash>() || input.peek::<Star>() {
+                    let mut current_type_variant = FactorType::None;
+                    if input.peek::<Slash>() {
+                        tokens_list.push_back(input.parse::<Slash>()?.token.clone());
+                        current_type_variant = FactorType::Slash;
+                    } else {
+                        tokens_list.push_back(input.parse::<Star>()?.token.clone());
+                        current_type_variant = FactorType::Star;
+                    }
+                    let nt = input.parse::<UnaryExpression>()?;
+                    unaries.push_back((current_type_variant, nt));
                 }
-                let nt = input.parse::<UnaryExpression>()?;
-                unaries.push_back((current_type_variant, nt));
+                let unaries: Vec<_> = unaries.into_iter().collect();
+                std::result::Result::Ok(Factor {
+                    token_type: type_variant,
+                    main_unary,
+                    unaries,
+                })
             }
-            let unaries: Vec<_> = unaries.into_iter().collect();
-            (/*ERROR*/)
+            do_parse(input)
         }
         fn peek(input: &ParseStream) -> bool {
             input.peek::<UnaryExpression>()
+        }
+    }
+    impl Display for Factor {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let operations = self
+                .unaries
+                .iter()
+                .map(|(t, unary)| {
+                    let token_str: &'static str = match t {
+                        FactorType::None => "",
+                        FactorType::Slash => "/",
+                        FactorType::Star => "*",
+                    };
+                    (token_str, unary.to_string())
+                });
+            let result = operation_display(
+                self.main_unary.to_string().as_str(),
+                operations,
+            );
+            f.write_fmt(format_args!("{0}", result))
         }
     }
     pub enum TermType {
@@ -3343,13 +3579,6 @@ mod syntax_analysis {
             let __arg1_discr = ::core::intrinsics::discriminant_value(other);
             __self_discr == __arg1_discr
         }
-    }
-    #[automatically_derived]
-    impl ::core::cmp::Eq for TermType {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {}
     }
     #[automatically_derived]
     impl ::core::clone::Clone for TermType {
@@ -3394,17 +3623,6 @@ mod syntax_analysis {
         }
     }
     #[automatically_derived]
-    impl ::core::cmp::Eq for Term {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {
-            let _: ::core::cmp::AssertParamIsEq<TermType>;
-            let _: ::core::cmp::AssertParamIsEq<Factor>;
-            let _: ::core::cmp::AssertParamIsEq<Vec<(TermType, Factor)>>;
-        }
-    }
-    #[automatically_derived]
     impl ::core::clone::Clone for Term {
         #[inline]
         fn clone(&self) -> Term {
@@ -3416,28 +3634,57 @@ mod syntax_analysis {
         }
     }
     impl Parser for Term {
-        fn parse(input: &mut ParseStream) -> Result<Self> {
-            let mut type_variant = TermType::None;
-            let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
-            let main_factor = input.parse::<Factor>()?;
-            let mut factors = std::collections::LinkedList::new();
-            while input.peek::<Minus>() || input.peek::<Plus>() {
-                let mut current_type_variant = TermType::None;
-                if input.peek::<Minus>() {
-                    tokens_list.push_back(input.parse::<Minus>()?.token.clone());
-                    current_type_variant = TermType::Minus;
-                } else if input.peek::<Plus>() {
-                    tokens_list.push_back(input.parse::<Plus>()?.token.clone());
-                    current_type_variant = TermType::Plus;
+        fn parse(input: &mut ParseStream) -> Result<Term> {
+            fn do_parse(input: &mut ParseStream) -> Result<Term> {
+                let mut type_variant = TermType::None;
+                let mut tokens_list: std::collections::LinkedList<
+                    crate::tokenizer::Token,
+                > = std::collections::LinkedList::new();
+                let main_factor = input.parse::<Factor>()?;
+                let mut factors = std::collections::LinkedList::new();
+                while input.peek::<Minus>() || input.peek::<Plus>() {
+                    let mut current_type_variant = TermType::None;
+                    if input.peek::<Minus>() {
+                        tokens_list.push_back(input.parse::<Minus>()?.token.clone());
+                        current_type_variant = TermType::Minus;
+                    } else {
+                        tokens_list.push_back(input.parse::<Plus>()?.token.clone());
+                        current_type_variant = TermType::Plus;
+                    }
+                    let nt = input.parse::<Factor>()?;
+                    factors.push_back((current_type_variant, nt));
                 }
-                let nt = input.parse::<Factor>()?;
-                factors.push_back((current_type_variant, nt));
+                let factors: Vec<_> = factors.into_iter().collect();
+                std::result::Result::Ok(Term {
+                    token_type: type_variant,
+                    main_factor,
+                    factors,
+                })
             }
-            let factors: Vec<_> = factors.into_iter().collect();
-            (/*ERROR*/)
+            do_parse(input)
         }
         fn peek(input: &ParseStream) -> bool {
             input.peek::<Factor>()
+        }
+    }
+    impl Display for Term {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let operations = self
+                .factors
+                .iter()
+                .map(|(t, factor)| {
+                    let token_str: &'static str = match t {
+                        TermType::None => "",
+                        TermType::Minus => "-",
+                        TermType::Plus => "+",
+                    };
+                    (token_str, factor.to_string())
+                });
+            let result = operation_display(
+                self.main_factor.to_string().as_str(),
+                operations,
+            );
+            f.write_fmt(format_args!("{0}", result))
         }
     }
     pub enum ComparisonType {
@@ -3473,13 +3720,6 @@ mod syntax_analysis {
             let __arg1_discr = ::core::intrinsics::discriminant_value(other);
             __self_discr == __arg1_discr
         }
-    }
-    #[automatically_derived]
-    impl ::core::cmp::Eq for ComparisonType {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {}
     }
     #[automatically_derived]
     impl ::core::clone::Clone for ComparisonType {
@@ -3526,17 +3766,6 @@ mod syntax_analysis {
         }
     }
     #[automatically_derived]
-    impl ::core::cmp::Eq for Comparison {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {
-            let _: ::core::cmp::AssertParamIsEq<ComparisonType>;
-            let _: ::core::cmp::AssertParamIsEq<Term>;
-            let _: ::core::cmp::AssertParamIsEq<Vec<(ComparisonType, Term)>>;
-        }
-    }
-    #[automatically_derived]
     impl ::core::clone::Clone for Comparison {
         #[inline]
         fn clone(&self) -> Comparison {
@@ -3548,36 +3777,68 @@ mod syntax_analysis {
         }
     }
     impl Parser for Comparison {
-        fn parse(input: &mut ParseStream) -> Result<Self> {
-            let mut type_variant = ComparisonType::None;
-            let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
-            let main_term = input.parse::<Term>()?;
-            let mut terms = std::collections::LinkedList::new();
-            while input.peek::<Less>() || input.peek::<LessEqual>()
-                || input.peek::<Greater>() || input.peek::<GreaterEqual>()
-            {
-                let mut current_type_variant = ComparisonType::None;
-                if input.peek::<Less>() {
-                    tokens_list.push_back(input.parse::<Less>()?.token.clone());
-                    current_type_variant = ComparisonType::Less;
-                } else if input.peek::<LessEqual>() {
-                    tokens_list.push_back(input.parse::<LessEqual>()?.token.clone());
-                    current_type_variant = ComparisonType::LessEqual;
-                } else if input.peek::<Greater>() {
-                    tokens_list.push_back(input.parse::<Greater>()?.token.clone());
-                    current_type_variant = ComparisonType::Greater;
-                } else if input.peek::<GreaterEqual>() {
-                    tokens_list.push_back(input.parse::<GreaterEqual>()?.token.clone());
-                    current_type_variant = ComparisonType::GreaterEqual;
+        fn parse(input: &mut ParseStream) -> Result<Comparison> {
+            fn do_parse(input: &mut ParseStream) -> Result<Comparison> {
+                let mut type_variant = ComparisonType::None;
+                let mut tokens_list: std::collections::LinkedList<
+                    crate::tokenizer::Token,
+                > = std::collections::LinkedList::new();
+                let main_term = input.parse::<Term>()?;
+                let mut terms = std::collections::LinkedList::new();
+                while input.peek::<Less>() || input.peek::<LessEqual>()
+                    || input.peek::<Greater>() || input.peek::<GreaterEqual>()
+                {
+                    let mut current_type_variant = ComparisonType::None;
+                    if input.peek::<Less>() {
+                        tokens_list.push_back(input.parse::<Less>()?.token.clone());
+                        current_type_variant = ComparisonType::Less;
+                    } else if input.peek::<LessEqual>() {
+                        tokens_list.push_back(input.parse::<LessEqual>()?.token.clone());
+                        current_type_variant = ComparisonType::LessEqual;
+                    } else if input.peek::<Greater>() {
+                        tokens_list.push_back(input.parse::<Greater>()?.token.clone());
+                        current_type_variant = ComparisonType::Greater;
+                    } else {
+                        tokens_list
+                            .push_back(input.parse::<GreaterEqual>()?.token.clone());
+                        current_type_variant = ComparisonType::GreaterEqual;
+                    }
+                    let nt = input.parse::<Term>()?;
+                    terms.push_back((current_type_variant, nt));
                 }
-                let nt = input.parse::<Term>()?;
-                terms.push_back((current_type_variant, nt));
+                let terms: Vec<_> = terms.into_iter().collect();
+                std::result::Result::Ok(Comparison {
+                    token_type: type_variant,
+                    main_term,
+                    terms,
+                })
             }
-            let terms: Vec<_> = terms.into_iter().collect();
-            (/*ERROR*/)
+            do_parse(input)
         }
         fn peek(input: &ParseStream) -> bool {
             input.peek::<Term>()
+        }
+    }
+    impl Display for Comparison {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let operations = self
+                .terms
+                .iter()
+                .map(|(t, term)| {
+                    let token_str: &'static str = match t {
+                        ComparisonType::None => "",
+                        ComparisonType::Less => "<",
+                        ComparisonType::LessEqual => "<=",
+                        ComparisonType::Greater => ">",
+                        ComparisonType::GreaterEqual => ">=",
+                    };
+                    (token_str, term.to_string())
+                });
+            let result = operation_display(
+                self.main_term.to_string().as_str(),
+                operations,
+            );
+            f.write_fmt(format_args!("{0}", result))
         }
     }
     pub enum EqualityType {
@@ -3609,13 +3870,6 @@ mod syntax_analysis {
             let __arg1_discr = ::core::intrinsics::discriminant_value(other);
             __self_discr == __arg1_discr
         }
-    }
-    #[automatically_derived]
-    impl ::core::cmp::Eq for EqualityType {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {}
     }
     #[automatically_derived]
     impl ::core::clone::Clone for EqualityType {
@@ -3661,17 +3915,6 @@ mod syntax_analysis {
         }
     }
     #[automatically_derived]
-    impl ::core::cmp::Eq for Equality {
-        #[inline]
-        #[doc(hidden)]
-        #[coverage(off)]
-        fn assert_receiver_is_total_eq(&self) -> () {
-            let _: ::core::cmp::AssertParamIsEq<EqualityType>;
-            let _: ::core::cmp::AssertParamIsEq<Comparison>;
-            let _: ::core::cmp::AssertParamIsEq<Vec<(EqualityType, Comparison)>>;
-        }
-    }
-    #[automatically_derived]
     impl ::core::clone::Clone for Equality {
         #[inline]
         fn clone(&self) -> Equality {
@@ -3683,31 +3926,61 @@ mod syntax_analysis {
         }
     }
     impl Parser for Equality {
-        fn parse(input: &mut ParseStream) -> Result<Self> {
-            let mut type_variant = EqualityType::None;
-            let mut tokens_list: std::collections::LinkedList<crate::tokenizer::Token> = std::collections::LinkedList::new();
-            let main_comparison = input.parse::<Comparison>()?;
-            let mut comparisons = std::collections::LinkedList::new();
-            while input.peek::<EqualEqual>() || input.peek::<BangEqual>() {
-                let mut current_type_variant = EqualityType::None;
-                if input.peek::<EqualEqual>() {
-                    tokens_list.push_back(input.parse::<EqualEqual>()?.token.clone());
-                    current_type_variant = EqualityType::EqualEqual;
-                } else if input.peek::<BangEqual>() {
-                    tokens_list.push_back(input.parse::<BangEqual>()?.token.clone());
-                    current_type_variant = EqualityType::BangEqual;
+        fn parse(input: &mut ParseStream) -> Result<Equality> {
+            fn do_parse(input: &mut ParseStream) -> Result<Equality> {
+                let mut type_variant = EqualityType::None;
+                let mut tokens_list: std::collections::LinkedList<
+                    crate::tokenizer::Token,
+                > = std::collections::LinkedList::new();
+                let main_comparison = input.parse::<Comparison>()?;
+                let mut comparisons = std::collections::LinkedList::new();
+                while input.peek::<EqualEqual>() || input.peek::<BangEqual>() {
+                    let mut current_type_variant = EqualityType::None;
+                    if input.peek::<EqualEqual>() {
+                        tokens_list
+                            .push_back(input.parse::<EqualEqual>()?.token.clone());
+                        current_type_variant = EqualityType::EqualEqual;
+                    } else {
+                        tokens_list.push_back(input.parse::<BangEqual>()?.token.clone());
+                        current_type_variant = EqualityType::BangEqual;
+                    }
+                    let nt = input.parse::<Comparison>()?;
+                    comparisons.push_back((current_type_variant, nt));
                 }
-                let nt = input.parse::<Comparison>()?;
-                comparisons.push_back((current_type_variant, nt));
+                let comparisons: Vec<_> = comparisons.into_iter().collect();
+                std::result::Result::Ok(Equality {
+                    token_type: type_variant,
+                    main_comparison,
+                    comparisons,
+                })
             }
-            let comparisons: Vec<_> = comparisons.into_iter().collect();
-            (/*ERROR*/)
+            do_parse(input)
         }
         fn peek(input: &ParseStream) -> bool {
             input.peek::<Comparison>()
         }
     }
-    type Expression = Box<Equality>;
+    impl Display for Equality {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let operations = self
+                .comparisons
+                .iter()
+                .map(|(t, comparison)| {
+                    let token_str: &'static str = match t {
+                        EqualityType::None => "",
+                        EqualityType::EqualEqual => "==",
+                        EqualityType::BangEqual => "!=",
+                    };
+                    (token_str, comparison.to_string())
+                });
+            let result = operation_display(
+                self.main_comparison.to_string().as_str(),
+                operations,
+            );
+            f.write_fmt(format_args!("{0}", result))
+        }
+    }
+    pub type Expression = Box<Equality>;
     impl Parser for Expression {
         fn parse(input: &mut ParseStream) -> Result<Self> {
             let equality = input.parse::<Equality>()?;
@@ -3716,5 +3989,20 @@ mod syntax_analysis {
         fn peek(input: &ParseStream) -> bool {
             input.peek::<Equality>()
         }
+    }
+    fn operation_display<T: Iterator<Item = (&'static str, std::string::String)>>(
+        initial: &str,
+        operations: T,
+    ) -> std::string::String {
+        let mut result = initial.to_string();
+        for (op, next) in operations {
+            result = ::alloc::__export::must_use({
+                let res = ::alloc::fmt::format(
+                    format_args!("({0} {1} {2})", op, result, next),
+                );
+                res
+            });
+        }
+        result
     }
 }
