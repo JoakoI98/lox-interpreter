@@ -1,10 +1,11 @@
-use super::{Command, CommandResult, CommandUtils};
+use super::{Command, CommandUtils};
+use crate::error::Result;
 use crate::syntax_analysis::Expression;
 
 pub struct EvaluateCommand;
 
 impl Command for EvaluateCommand {
-    fn run(&self, filename: &str) -> CommandResult {
+    fn run(&self, filename: &str) -> Result<()> {
         CommandUtils::log_debug("Logs from your program will appear here!");
 
         let file_contents = CommandUtils::read_file(filename)?;
@@ -13,22 +14,14 @@ impl Command for EvaluateCommand {
         let mut parse_stream = CommandUtils::create_parse_stream(tokens);
 
         match parse_stream.parse::<Expression>() {
-            Ok(expression) => {
-                match expression.eval() {
-                    Ok(result) => {
-                        println!("{}", result);
-                        Ok(())
-                    }
-                    Err(e) => {
-                        eprintln!("{}", e);
-                        Err(70) // Runtime error exit code
-                    }
+            Ok(expression) => match expression.eval() {
+                Ok(result) => {
+                    println!("{}", result);
+                    Ok(())
                 }
-            }
-            Err(e) => {
-                eprintln!("{}", e);
-                Err(65) // Parse error exit code
-            }
+                Err(e) => Err(e.into()),
+            },
+            Err(e) => Err(e.into()),
         }
     }
 }

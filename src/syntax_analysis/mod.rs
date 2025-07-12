@@ -1,6 +1,6 @@
 mod parsing;
 mod productions;
-pub use parsing::ParseStream;
+pub use parsing::{ParseError, ParseStream};
 
 pub use productions::expression::{
     Comparison, ComparisonType, Equality, EqualityType, Expression, Factor, FactorType,

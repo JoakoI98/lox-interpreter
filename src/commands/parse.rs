@@ -1,10 +1,11 @@
-use super::{Command, CommandResult, CommandUtils};
+use super::{Command, CommandUtils};
+use crate::error::Result;
 use crate::syntax_analysis::Expression;
 
 pub struct ParseCommand;
 
 impl Command for ParseCommand {
-    fn run(&self, filename: &str) -> CommandResult {
+    fn run(&self, filename: &str) -> Result<()> {
         CommandUtils::log_debug("Logs from your program will appear here!");
 
         let file_contents = CommandUtils::read_file(filename)?;
@@ -17,10 +18,7 @@ impl Command for ParseCommand {
                 println!("{}", expression);
                 Ok(())
             }
-            Err(e) => {
-                eprintln!("{}", e);
-                Err(65) // Parse error exit code
-            }
+            Err(e) => Err(e.into()),
         }
     }
 }

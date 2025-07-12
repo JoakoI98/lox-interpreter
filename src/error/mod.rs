@@ -1,18 +1,96 @@
-use std::fmt::Display;
+use thiserror::Error;
 
-#[derive(Debug, PartialEq)]
-pub enum LoxError {
-    ScannerError { line: usize, message: String },
+// Import the module-specific errors from their public exports
+use crate::evaluation::RuntimeError;
+use crate::syntax_analysis::ParseError;
+use crate::tokenizer::ScannerError;
+
+/// Unified error type for the entire interpreter
+#[derive(Error, Debug)]
+pub enum InterpreterError {
+    /// Errors that occur during tokenization/scanning
+    #[error("{0}")]
+    Scanner(#[from] ScannerError),
+
+    /// Errors that occur during parsing
+    #[error("{0}")]
+    Parse(#[from] ParseError),
+
+    /// Errors that occur during runtime evaluation
+    #[error("{0}")]
+    Runtime(#[from] RuntimeError),
+
+    /// File I/O errors
+    #[error("Failed to read file '{filename}': {source}")]
+    Io {
+        filename: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    /// Unknown command error
+    #[error("Unknown command: {command}")]
+    UnknownCommand { command: String },
+
+    /// Usage error
+    #[error("Usage: {usage}")]
+    Usage { usage: String },
 }
 
-impl Display for LoxError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl InterpreterError {
+    /// Get the appropriate exit code for this error type
+    pub fn exit_code(&self) -> i32 {
         match self {
-            LoxError::ScannerError { line, message } => {
-                write!(f, "[line {}] Error: {}", line, message)
-            }
+            InterpreterError::Scanner(_) => 65,
+            InterpreterError::Parse(_) => 65,
+            InterpreterError::Runtime(_) => 70,
+            InterpreterError::Io { .. } => 1,
+            InterpreterError::UnknownCommand { .. } => 1,
+            InterpreterError::Usage { .. } => 1,
         }
+    }
+
+    /// Create an I/O error with context
+    pub fn io_error(filename: String, source: std::io::Error) -> Self {
+        Self::Io { filename, source }
+    }
+
+    /// Create an unknown command error
+    pub fn unknown_command(command: String) -> Self {
+        Self::UnknownCommand { command }
+    }
+
+    /// Create a usage error
+    pub fn usage(usage: String) -> Self {
+        Self::Usage { usage }
+    }
+
+    /// Handle multiple scanner errors at once
+    pub fn from_scanner_errors(errors: Vec<ScannerError>) -> Vec<Self> {
+        errors.into_iter().map(Self::Scanner).collect()
     }
 }
 
-impl std::error::Error for LoxError {}
+/// Convenience type alias for Results throughout the interpreter
+pub type Result<T> = std::result::Result<T, InterpreterError>;
+
+/// Convenience type alias for Results that can contain multiple errors
+pub type MultiResult<T> = std::result::Result<T, Vec<InterpreterError>>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_exit_codes() {
+        // Test that error types map to correct exit codes
+        let scanner_err = InterpreterError::Scanner(ScannerError::UnexpectedCharacter('x', 1));
+        assert_eq!(scanner_err.exit_code(), 65);
+
+        let io_err = InterpreterError::io_error(
+            "test.lox".to_string(),
+            std::io::Error::new(std::io::ErrorKind::NotFound, "file not found"),
+        );
+        assert_eq!(io_err.exit_code(), 1);
+    }
+}

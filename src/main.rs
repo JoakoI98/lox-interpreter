@@ -1,4 +1,5 @@
 mod commands;
+mod error;
 mod evaluation;
 mod syntax_analysis;
 mod tokenizer;
@@ -36,6 +37,8 @@ fn run() {
     // Execute the command and handle the result
     match command.run(filename) {
         Ok(()) => {} // Success - exit code 0
-        Err(exit_code) => std::process::exit(exit_code),
+        Err(error) => {
+            std::process::exit(error.exit_code());
+        }
     }
 }
