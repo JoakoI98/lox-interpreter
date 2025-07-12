@@ -1,5 +1,6 @@
 use super::{Command, CommandUtils};
 use crate::error::Result;
+use crate::evaluation::Evaluator;
 use crate::syntax_analysis::Expression;
 
 pub struct EvaluateCommand;
@@ -14,13 +15,16 @@ impl Command for EvaluateCommand {
         let mut parse_stream = CommandUtils::create_parse_stream(tokens);
 
         match parse_stream.parse::<Expression>() {
-            Ok(expression) => match expression.eval() {
-                Ok(result) => {
-                    println!("{}", result);
-                    Ok(())
+            Ok(expression) => {
+                let evaluator = Evaluator::new();
+                match evaluator.eval_expression(&expression) {
+                    Ok(result) => {
+                        println!("{}", result);
+                        Ok(())
+                    }
+                    Err(e) => Err(e.into()),
                 }
-                Err(e) => Err(e.into()),
-            },
+            }
             Err(e) => Err(e.into()),
         }
     }

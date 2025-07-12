@@ -1,29 +1,10 @@
+// This file previously contained run() method implementations on statement AST types.
+// All execution logic has been moved to the centralized Evaluator in evaluator.rs
+// for better separation of concerns and improved testability.
+
+// The imports below are kept for potential future use or backwards compatibility
 use super::runtime_value::{Result, RuntimeError, RuntimeValue};
 use crate::syntax_analysis::{PrintStatement, Program, Statement, StatementType};
 
-impl PrintStatement {
-    pub fn run(&self) -> Result<RuntimeValue> {
-        let value = self.expr.eval()?;
-        println!("{}", value);
-        Ok(value)
-    }
-}
-
-impl Statement {
-    pub fn run(&self) -> Result<RuntimeValue> {
-        match &self.token_type {
-            StatementType::PrintStatement(p) => p.run(),
-            StatementType::ExprStatement(e) => e.expr.eval(),
-            _ => Err(RuntimeError::UnexpectedRuntimeError),
-        }
-    }
-}
-
-impl Program {
-    pub fn run(&self) -> Result<RuntimeValue> {
-        for (_, statement) in &self.statements {
-            statement.run()?;
-        }
-        Ok(RuntimeValue::Nil)
-    }
-}
+// All execution logic has been moved to src/evaluation/evaluator.rs
+// Use the Evaluator struct instead of calling .run() on AST nodes directly.
