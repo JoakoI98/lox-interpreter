@@ -9,4 +9,6 @@ target/
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 test.txt
+test.lox
 .vscode/
+expanded.rs
