@@ -113,7 +113,7 @@ fn run() {
                             Ok(r) => println!("{}", r),
                             Err(e) => {
                                 eprintln!("{}", e);
-                                std::process::exit(65);
+                                std::process::exit(70);
                             }
                         }
                     }
