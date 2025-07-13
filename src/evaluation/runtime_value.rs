@@ -34,8 +34,8 @@ pub enum RuntimeError {
     UnexpectedRuntimeError,
     #[error("AST invalid structure")]
     ASTInvalidStructure,
-    #[error("Undefined variable {0}")]
-    UndefinedVariable(String),
+    #[error("Undefined variable '{0}'.\nLine: {1}")]
+    UndefinedVariable(String, usize),
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;

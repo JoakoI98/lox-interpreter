@@ -29,9 +29,7 @@ impl Visitor<&PrimaryExpression, Result<Box<dyn Evaluable>>> for PrimaryEvaluato
             | PrimaryExpressionType::Identifier => match &token.token_value {
                 TokenValue::Number(value) => Ok(Box::new(PrimaryEvaluator::Number(value.clone()))),
                 TokenValue::String(value) => Ok(Box::new(PrimaryEvaluator::String(value.clone()))),
-                TokenValue::Identifier(value) => {
-                    Ok(Box::new(PrimaryEvaluator::Identifier(value.clone())))
-                }
+                TokenValue::Identifier(_) => Ok(Box::new(PrimaryEvaluator::from_raw_token(token)?)),
                 _ => Err(RuntimeError::ASTInvalidStructure),
             },
             PrimaryExpressionType::Expression(expr) => expr.accept(&BinaryEvaluatorBuilder),

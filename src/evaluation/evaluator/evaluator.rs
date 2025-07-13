@@ -1,4 +1,7 @@
-use crate::evaluation::run::RunState;
+use crate::{
+    evaluation::run::RunState,
+    tokenizer::{Token, TokenValue},
+};
 
 use super::super::{RuntimeError, RuntimeValue};
 
@@ -7,12 +10,47 @@ pub trait Evaluable: std::fmt::Debug {
 }
 
 #[derive(Debug)]
+pub struct EvaluableIdentifier {
+    identifier: String,
+    line: usize,
+}
+
+impl EvaluableIdentifier {
+    pub(super) fn from_raw_token(token: &Token) -> Result<Self, RuntimeError> {
+        let identifier_string = match &token.token_value {
+            TokenValue::Identifier(identifier) => identifier.clone(),
+            _ => return Err(RuntimeError::ASTInvalidStructure),
+        };
+        Ok(Self {
+            identifier: identifier_string,
+            line: token.line,
+        })
+    }
+
+    pub fn identifier(&self) -> &str {
+        &self.identifier
+    }
+
+    pub fn line(&self) -> usize {
+        self.line
+    }
+}
+
+#[derive(Debug)]
 pub enum PrimaryEvaluator {
     Number(f64),
     String(String),
     Boolean(bool),
-    Identifier(String),
+    Identifier(EvaluableIdentifier),
     Nil,
+}
+
+impl PrimaryEvaluator {
+    pub(super) fn from_raw_token(token: &Token) -> Result<Self, RuntimeError> {
+        Ok(PrimaryEvaluator::Identifier(
+            EvaluableIdentifier::from_raw_token(token)?,
+        ))
+    }
 }
 
 impl Evaluable for PrimaryEvaluator {

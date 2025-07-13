@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::evaluation::{RuntimeError, RuntimeValue};
+use crate::evaluation::{evaluator::EvaluableIdentifier, RuntimeError, RuntimeValue};
 
 #[derive(Default, Debug)]
 pub struct RunState {
@@ -13,13 +13,22 @@ impl RunState {
         self.global_variables.insert(identifier, value);
     }
 
-    pub fn evaluate_global_variable(&self, identifier: &str) -> Result<RuntimeValue, RuntimeError> {
+    pub fn evaluate_global_variable(
+        &self,
+        identifier: &EvaluableIdentifier,
+    ) -> Result<RuntimeValue, RuntimeError> {
         let value = self
             .global_variables
-            .get(identifier)
-            .ok_or(RuntimeError::UndefinedVariable(identifier.to_string()))?
+            .get(identifier.identifier())
+            .ok_or(RuntimeError::UndefinedVariable(
+                identifier.identifier().to_string(),
+                identifier.line(),
+            ))?
             .as_ref()
-            .ok_or(RuntimeError::UndefinedVariable(identifier.to_string()))?;
+            .ok_or(RuntimeError::UndefinedVariable(
+                identifier.identifier().to_string(),
+                identifier.line(),
+            ))?;
         Ok(value.clone())
     }
 }
