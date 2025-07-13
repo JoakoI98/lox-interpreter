@@ -1,9 +1,7 @@
+use super::super::runtime_value::{Result, RuntimeError};
+use super::evaluator::{BinaryEvaluator, BinaryOperation, UnaryEvaluator, UnaryOperation};
 use super::evaluator::{Evaluable, PrimaryEvaluator};
-use super::runtime_value::{Result, RuntimeError};
 use crate::common::Visitable;
-use crate::evaluation::evaluator::{
-    BinaryEvaluator, BinaryOperation, UnaryEvaluator, UnaryOperation,
-};
 use crate::syntax_analysis::{
     Comparison, ComparisonType, Equality, EqualityType, Factor, FactorType, Term, TermType,
     UnaryExpression, UnaryExpressionSelf, UnaryExpressionSelfType, UnaryExpressionType,

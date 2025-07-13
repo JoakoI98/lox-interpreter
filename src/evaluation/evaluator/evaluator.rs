@@ -1,4 +1,4 @@
-use super::{RuntimeError, RuntimeValue};
+use super::super::{RuntimeError, RuntimeValue};
 
 pub trait Evaluable: std::fmt::Debug {
     fn eval(&self) -> Result<RuntimeValue, RuntimeError>;

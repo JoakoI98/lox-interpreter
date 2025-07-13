@@ -1,10 +1,8 @@
-use super::runtime_value::Result;
+use super::super::runtime_value::Result;
+use super::run::{ExpressionRunnable, PrintRunnable, ProgramRunnable, Runnable};
 use crate::{
     common::{Visitable, Visitor},
-    evaluation::{
-        run::{ExpressionRunnable, PrintRunnable, ProgramRunnable, Runnable},
-        BinaryEvaluatorBuilder, RuntimeError,
-    },
+    evaluation::{BinaryEvaluatorBuilder, RuntimeError},
     syntax_analysis::{ExprStatement, PrintStatement, ProgramAst, Statement, StatementType},
 };
 
