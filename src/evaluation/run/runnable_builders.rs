@@ -1,5 +1,8 @@
 use super::super::runtime_value::Result;
 use super::run::{ExpressionRunnable, PrintRunnable, ProgramRunnable, Runnable};
+use crate::evaluation::run::run::VarDeclarationRunnable;
+use crate::syntax_analysis::{Declaration, DeclarationType, VarDeclaration};
+use crate::tokenizer::TokenValue;
 use crate::{
     common::{Visitable, Visitor},
     evaluation::{BinaryEvaluatorBuilder, RuntimeError},
@@ -28,6 +31,37 @@ impl Visitor<&Statement, Result<Box<dyn Runnable>>> for RunnableBuilder {
             StatementType::ExprStatement(expr) => expr.accept(&Self),
             StatementType::PrintStatement(print) => print.accept(&Self),
             StatementType::None => Err(RuntimeError::ASTInvalidStructure),
+        }
+    }
+}
+
+impl Visitor<&VarDeclaration, Result<Box<dyn Runnable>>> for RunnableBuilder {
+    fn visit(&self, node: &VarDeclaration) -> Result<Box<dyn Runnable>> {
+        let ident_token = node
+            .token_list
+            .get(1)
+            .ok_or(RuntimeError::ASTInvalidStructure)?;
+        let ident_value = match &ident_token.token_value {
+            TokenValue::Identifier(ident) => ident,
+            _ => return Err(RuntimeError::ASTInvalidStructure),
+        };
+        let mut evaluable = None;
+        if let Some(expr) = &node.expr {
+            evaluable = Some(expr.accept(&BinaryEvaluatorBuilder)?);
+        }
+        Ok(Box::new(VarDeclarationRunnable::new(
+            ident_value.clone(),
+            evaluable,
+        )))
+    }
+}
+
+impl Visitor<&Declaration, Result<Box<dyn Runnable>>> for RunnableBuilder {
+    fn visit(&self, node: &Declaration) -> Result<Box<dyn Runnable>> {
+        match &node.token_type {
+            DeclarationType::VarDeclaration(var) => var.accept(&Self),
+            DeclarationType::Statement(stmt) => stmt.accept(&Self),
+            DeclarationType::None => Err(RuntimeError::ASTInvalidStructure),
         }
     }
 }

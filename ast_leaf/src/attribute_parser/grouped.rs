@@ -254,9 +254,15 @@ impl GroupedOr {
         let last_if_tokens = if_tokens.pop_back();
         let if_tokens = if_tokens.into_iter();
 
+        let else_token = if self.elements.len() > 1 {
+            quote! { else }
+        } else {
+            quote! {}
+        };
+
         return quote! {
             #(#if_tokens)else*
-            else #last_if_tokens
+            #else_token #last_if_tokens
         };
     }
 

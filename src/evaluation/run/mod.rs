@@ -17,7 +17,7 @@ impl Program {
         let runner = program_ast.accept(&RunnableBuilder)?;
         Ok(Self {
             program: runner,
-            state: RunState,
+            state: RunState::default(),
         })
     }
 

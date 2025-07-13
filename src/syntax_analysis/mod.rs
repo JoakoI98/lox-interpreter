@@ -8,6 +8,5 @@ pub use productions::expression::{
     UnaryExpressionSelfType, UnaryExpressionType,
 };
 
-pub use productions::statement::{
-    ExprStatement, PrintStatement, ProgramAst, Statement, StatementType,
-};
+pub use productions::declarations::{Declaration, DeclarationType, ProgramAst, VarDeclaration};
+pub use productions::statement::{ExprStatement, PrintStatement, Statement, StatementType};
