@@ -42,7 +42,7 @@ impl Visitor<&VarDeclaration, Result<Box<dyn Runnable>>> for RunnableBuilder {
             .get(1)
             .ok_or(RuntimeError::ASTInvalidStructure)?;
         let ident_value = match &ident_token.token_value {
-            TokenValue::Identifier(ident) => ident,
+            TokenValue::Identifier(_) => ident_token.lexeme.clone(),
             _ => return Err(RuntimeError::ASTInvalidStructure),
         };
         let mut evaluable = None;
@@ -50,7 +50,7 @@ impl Visitor<&VarDeclaration, Result<Box<dyn Runnable>>> for RunnableBuilder {
             evaluable = Some(expr.accept(&BinaryEvaluatorBuilder)?);
         }
         Ok(Box::new(VarDeclarationRunnable::new(
-            ident_value.clone(),
+            ident_value,
             evaluable,
         )))
     }

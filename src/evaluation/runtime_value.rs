@@ -30,8 +30,6 @@ pub enum RuntimeError {
     UnaryOperandError(String),
     #[error("Operand must be {0}")]
     BinaryOperandError(String),
-    #[error("Unexpected runtime error")]
-    UnexpectedRuntimeError,
     #[error("AST invalid structure")]
     ASTInvalidStructure,
     #[error("Undefined variable '{0}'.\nLine: {1}")]

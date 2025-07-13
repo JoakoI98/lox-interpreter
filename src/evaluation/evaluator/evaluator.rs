@@ -18,7 +18,7 @@ pub struct EvaluableIdentifier {
 impl EvaluableIdentifier {
     pub(super) fn from_raw_token(token: &Token) -> Result<Self, RuntimeError> {
         let identifier_string = match &token.token_value {
-            TokenValue::Identifier(identifier) => identifier.clone(),
+            TokenValue::Identifier(_) => token.lexeme.clone(),
             _ => return Err(RuntimeError::ASTInvalidStructure),
         };
         Ok(Self {
