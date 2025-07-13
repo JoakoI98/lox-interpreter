@@ -32,6 +32,8 @@ pub enum RuntimeError {
     BinaryOperandError(String),
     #[error("Unexpected runtime error")]
     UnexpectedRuntimeError,
+    #[error("AST invalid structure")]
+    ASTInvalidStructure,
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;

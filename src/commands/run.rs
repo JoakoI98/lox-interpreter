@@ -1,9 +1,15 @@
 use super::{Command, CommandUtils};
-use crate::error::Result;
-use crate::evaluation::Evaluator;
-use crate::syntax_analysis::Program;
+use crate::{error::Result, evaluation::Program, syntax_analysis::ProgramAst};
 
 pub struct RunCommand;
+
+impl RunCommand {
+    fn run_program(program_ast: ProgramAst) -> Result<()> {
+        let mut program = Program::new(program_ast)?;
+        program.run()?;
+        Ok(())
+    }
+}
 
 impl Command for RunCommand {
     fn run(&self, filename: &str) -> Result<()> {
@@ -14,14 +20,8 @@ impl Command for RunCommand {
 
         let mut parse_stream = CommandUtils::create_parse_stream(tokens);
 
-        match parse_stream.parse::<Program>() {
-            Ok(program) => {
-                let evaluator = Evaluator::new();
-                match evaluator.run_program(&program) {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e.into()),
-                }
-            }
+        match parse_stream.parse::<ProgramAst>() {
+            Ok(program) => Self::run_program(program),
             Err(e) => Err(e.into()),
         }
     }

@@ -10,6 +10,7 @@ use super::super::parsing::{
     ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError,
 };
 
+use crate::common::{Visitable, Visitor};
 use crate::tokenizer::Token;
 
 #[ast_leaf(("NUMBER" | "STRING" | "true" | "false" | "nil" | 1: "(" Expression ")" ))]

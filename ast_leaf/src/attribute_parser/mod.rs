@@ -224,6 +224,12 @@ impl Production {
             .map(|item| item.get_parse_sentence(&struct_ast.type_field));
         quote! {
 
+            impl crate::common::Visitable for #struct_name_ident {
+                fn accept<'a, T, U: Visitor<&'a Self, T>>(&'a self, visitor: &U) -> T {
+                    visitor.visit(self)
+                }
+            }
+
             impl Parser for #struct_name_ident {
 
                 fn parse(input: &mut ParseStream) -> Result<#struct_name_ident> {

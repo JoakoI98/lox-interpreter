@@ -1,4 +1,5 @@
 mod commands;
+mod common;
 mod error;
 mod evaluation;
 mod syntax_analysis;

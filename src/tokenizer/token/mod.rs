@@ -8,7 +8,7 @@ use token_type::ArrangedTokens;
 use token_type::PARSERS;
 
 pub use static_token::StaticToken;
-pub use token_type::{EOFToken, Token as TokenEnum, TokenType};
+pub use token_type::{EOFToken, Token as TokenEnum, TokenType, TokenValue};
 
 #[derive(Error, Debug)]
 pub enum TokenErrors {

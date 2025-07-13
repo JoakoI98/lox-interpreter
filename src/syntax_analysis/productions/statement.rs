@@ -6,6 +6,7 @@ use super::super::parsing::primitives::{Print, Semicolon};
 use super::super::parsing::{ParseStream, Parser, Result};
 
 use super::expression::Expression;
+use crate::common::{Visitable, Visitor};
 
 #[ast_leaf("print" expr ";")]
 #[derive(Debug, PartialEq, Clone)]
@@ -32,7 +33,7 @@ pub struct Statement {
 
 #[ast_leaf((statements)*)]
 #[derive(Debug, PartialEq, Clone)]
-pub struct Program {
+pub struct ProgramAst {
     #[Type]
     pub token_type: ProgramType,
     pub statements: Vec<(ProgramType, Statement)>,
