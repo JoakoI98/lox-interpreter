@@ -1,7 +1,9 @@
+use crate::evaluation::run::RunState;
+
 use super::super::{RuntimeError, RuntimeValue};
 
 pub trait Evaluable: std::fmt::Debug {
-    fn eval(&self) -> Result<RuntimeValue, RuntimeError>;
+    fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError>;
 }
 
 #[derive(Debug)]
@@ -9,16 +11,20 @@ pub enum PrimaryEvaluator {
     Number(f64),
     String(String),
     Boolean(bool),
+    Identifier(String),
     Nil,
 }
 
 impl Evaluable for PrimaryEvaluator {
-    fn eval(&self) -> Result<RuntimeValue, RuntimeError> {
+    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
         match self {
             PrimaryEvaluator::Number(value) => Ok(RuntimeValue::Number(value.clone())),
             PrimaryEvaluator::String(value) => Ok(RuntimeValue::String(value.clone())),
             PrimaryEvaluator::Boolean(value) => Ok(RuntimeValue::Boolean(value.clone())),
             PrimaryEvaluator::Nil => Ok(RuntimeValue::Nil),
+            PrimaryEvaluator::Identifier(identifier) => {
+                run_state.evaluate_global_variable(identifier)
+            }
         }
     }
 }
@@ -42,8 +48,8 @@ impl UnaryEvaluator {
 }
 
 impl Evaluable for UnaryEvaluator {
-    fn eval(&self) -> Result<RuntimeValue, RuntimeError> {
-        let operand = self.operand.eval()?;
+    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
+        let operand = self.operand.eval(run_state)?;
         match self.operation {
             UnaryOperation::Negation => -operand,
             UnaryOperation::Not => !operand,
@@ -87,9 +93,9 @@ impl BinaryEvaluator {
 }
 
 impl Evaluable for BinaryEvaluator {
-    fn eval(&self) -> Result<RuntimeValue, RuntimeError> {
-        let left = self.left.eval()?;
-        let right = self.right.eval()?;
+    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
+        let left = self.left.eval(run_state)?;
+        let right = self.right.eval(run_state)?;
         match self.operation {
             BinaryOperation::Addition => left + right,
             BinaryOperation::Subtraction => left - right,

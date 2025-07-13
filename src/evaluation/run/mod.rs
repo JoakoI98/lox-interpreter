@@ -1,7 +1,9 @@
 mod run;
+mod run_state;
 mod runnable_builders;
 
-use run::{RunState, Runnable};
+use run::Runnable;
+pub use run_state::RunState;
 
 use crate::common::Visitable;
 use crate::{evaluation::RuntimeError, syntax_analysis::ProgramAst};

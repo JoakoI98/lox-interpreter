@@ -5,7 +5,7 @@ use std::{
 
 use thiserror::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum RuntimeValue {
     Number(f64),
     String(String),
@@ -34,6 +34,8 @@ pub enum RuntimeError {
     UnexpectedRuntimeError,
     #[error("AST invalid structure")]
     ASTInvalidStructure,
+    #[error("Undefined variable {0}")]
+    UndefinedVariable(String),
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;

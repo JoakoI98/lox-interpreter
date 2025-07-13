@@ -1,7 +1,7 @@
 use super::{Command, CommandUtils};
 use crate::common::Visitable;
 use crate::error::Result;
-use crate::evaluation::{BinaryEvaluatorBuilder, RuntimeValue};
+use crate::evaluation::{BinaryEvaluatorBuilder, RunState, RuntimeValue};
 use crate::syntax_analysis::Expression;
 
 pub struct EvaluateCommand;
@@ -9,7 +9,7 @@ pub struct EvaluateCommand;
 impl EvaluateCommand {
     fn evaluate_expression(&self, expression: &Expression) -> Result<RuntimeValue> {
         let evaluator = expression.accept(&BinaryEvaluatorBuilder)?;
-        Ok(evaluator.eval()?)
+        Ok(evaluator.eval(&RunState::default())?)
     }
 }
 
