@@ -34,7 +34,7 @@ pub enum RuntimeError {
     ASTInvalidStructure,
     #[error("Undefined variable '{0}'.\nLine: {1}")]
     UndefinedVariable(String, usize),
-    #[error("Resolver error: {0}")]
+    #[error("{0}")]
     ResolverError(#[from] super::resolver::ResolverError),
 }
 

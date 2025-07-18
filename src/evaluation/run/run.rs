@@ -78,7 +78,7 @@ impl Runnable for VarDeclarationRunnable {
         if let Some(expr) = &self.expr {
             value = Some(expr.eval(state)?);
         }
-        state.declare_global_variable(self.identifier.clone(), value);
+        state.declare_variable(self.identifier.clone(), value, Some(0));
         Ok(())
     }
 }

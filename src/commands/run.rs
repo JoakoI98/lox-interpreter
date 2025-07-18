@@ -1,21 +1,22 @@
 use super::{Command, CommandUtils};
-use crate::{error::Result, evaluation::Program, syntax_analysis::ProgramAst};
+use crate::{
+    error::Result as CommandResult,
+    evaluation::{Program, RuntimeError},
+    syntax_analysis::ProgramAst,
+};
 
 pub struct RunCommand;
 
 impl RunCommand {
-    fn run_program(program_ast: ProgramAst) -> Result<()> {
+    fn run_program(program_ast: ProgramAst) -> Result<(), RuntimeError> {
         let mut program = Program::new_with_context(program_ast)?;
-        let result = program.run();
-        if let Err(e) = &result {
-            eprintln!("{}", e);
-        }
-        result.map_err(|e| e.into())
+        program.run()?;
+        Ok(())
     }
 }
 
 impl Command for RunCommand {
-    fn run(&self, filename: &str) -> Result<()> {
+    fn run(&self, filename: &str) -> CommandResult<()> {
         CommandUtils::log_debug("Logs from your program will appear here!");
 
         let file_contents = CommandUtils::read_file(filename)?;
@@ -24,7 +25,10 @@ impl Command for RunCommand {
         let mut parse_stream = CommandUtils::create_parse_stream(tokens);
 
         match parse_stream.parse::<ProgramAst>() {
-            Ok(program) => Self::run_program(program),
+            Ok(program) => Self::run_program(program).map_err(|e| {
+                eprintln!("{}", e);
+                e.into()
+            }),
             Err(e) => Err(e.into()),
         }
     }

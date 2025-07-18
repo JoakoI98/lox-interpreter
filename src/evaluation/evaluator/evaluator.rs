@@ -1,5 +1,5 @@
 use crate::{
-    evaluation::run::RunState,
+    evaluation::{resolver::Resolver, run::RunState},
     tokenizer::{Token, TokenValue},
 };
 
@@ -13,26 +13,35 @@ pub trait Evaluable: std::fmt::Debug {
 pub struct EvaluableIdentifier {
     identifier: String,
     line: usize,
+    depth: Option<usize>,
 }
 
 impl EvaluableIdentifier {
-    pub(super) fn from_raw_token(token: &Token) -> Result<Self, RuntimeError> {
+    pub(super) fn from_raw_token(token: &Token, resolver: &Resolver) -> Result<Self, RuntimeError> {
         let identifier_string = match &token.token_value {
             TokenValue::Identifier(_) => token.lexeme.clone(),
             _ => return Err(RuntimeError::ASTInvalidStructure),
         };
         Ok(Self {
+            depth: resolver.resolve(&identifier_string)?,
             identifier: identifier_string,
             line: token.line,
         })
     }
 
+    #[inline]
     pub fn identifier(&self) -> &str {
         &self.identifier
     }
 
+    #[inline]
     pub fn line(&self) -> usize {
         self.line
+    }
+
+    #[inline]
+    pub fn depth(&self) -> Option<usize> {
+        self.depth
     }
 }
 
@@ -46,9 +55,9 @@ pub enum PrimaryEvaluator {
 }
 
 impl PrimaryEvaluator {
-    pub(super) fn from_raw_token(token: &Token) -> Result<Self, RuntimeError> {
+    pub(super) fn from_raw_token(token: &Token, resolver: &Resolver) -> Result<Self, RuntimeError> {
         Ok(PrimaryEvaluator::Identifier(
-            EvaluableIdentifier::from_raw_token(token)?,
+            EvaluableIdentifier::from_raw_token(token, resolver)?,
         ))
     }
 }
@@ -60,9 +69,7 @@ impl Evaluable for PrimaryEvaluator {
             PrimaryEvaluator::String(value) => Ok(RuntimeValue::String(value.clone())),
             PrimaryEvaluator::Boolean(value) => Ok(RuntimeValue::Boolean(value.clone())),
             PrimaryEvaluator::Nil => Ok(RuntimeValue::Nil),
-            PrimaryEvaluator::Identifier(identifier) => {
-                run_state.evaluate_global_variable(identifier)
-            }
+            PrimaryEvaluator::Identifier(identifier) => run_state.evaluate_variable(identifier),
         }
     }
 }
@@ -164,7 +171,11 @@ impl AssignmentEvaluator {
 impl Evaluable for AssignmentEvaluator {
     fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
         let value = self.value.eval(run_state)?;
-        run_state.set_variable(self.identifier.identifier.clone(), value.clone());
+        run_state.set_variable(
+            self.identifier.identifier.clone(),
+            value.clone(),
+            self.identifier.depth,
+        );
         Ok(value)
     }
 }

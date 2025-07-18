@@ -10,7 +10,7 @@ impl EvaluateCommand {
     fn evaluate_expression(&self, expression: &Expression) -> Result<RuntimeValue> {
         let evaluator = expression
             .accept_with_context(&AssignmentEvaluatorBuilder, &BuilderContext::default())?;
-        Ok(evaluator.eval(&mut RunState::default())?)
+        Ok(evaluator.eval(&mut RunState::new())?)
     }
 }
 

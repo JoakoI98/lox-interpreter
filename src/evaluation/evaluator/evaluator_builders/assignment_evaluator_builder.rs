@@ -22,7 +22,8 @@ impl VisitorWithContext<&AssignmentSelf, Result<Box<dyn Evaluable>>, BuilderCont
             .token_list
             .first()
             .ok_or(RuntimeError::ASTInvalidStructure)?;
-        let ident_evaluator = EvaluableIdentifier::from_raw_token(ident_token)?;
+        let ident_evaluator =
+            EvaluableIdentifier::from_raw_token(ident_token, &context.resolver.borrow())?;
         let value_evaluator = node
             .assignment
             .accept_with_context(&AssignmentEvaluatorBuilder, context)?;

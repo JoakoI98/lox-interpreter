@@ -75,9 +75,11 @@ impl VisitorWithContext<&VarDeclaration, Result<Box<dyn Runnable>>, BuilderConte
         };
 
         let mut evaluable = None;
+        context.resolver.borrow_mut().declare(&ident_value)?;
         if let Some(expr) = &node.expr {
             evaluable = Some(expr.accept_with_context(&AssignmentEvaluatorBuilder, context)?);
         }
+        context.resolver.borrow_mut().define(&ident_value)?;
 
         Ok(Box::new(VarDeclarationRunnable::new(
             ident_value,

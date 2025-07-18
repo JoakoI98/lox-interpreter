@@ -21,7 +21,7 @@ impl Program {
         let runner = program_ast.accept_with_context(&RunnableBuilder, &context)?;
         Ok(Self {
             program: runner,
-            state: RunState::default(),
+            state: RunState::new(),
         })
     }
 

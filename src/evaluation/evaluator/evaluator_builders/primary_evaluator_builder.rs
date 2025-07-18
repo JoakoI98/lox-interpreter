@@ -37,11 +37,10 @@ impl VisitorWithContext<&PrimaryExpression, Result<Box<dyn Evaluable>>, BuilderC
             | PrimaryExpressionType::Identifier => match &token.token_value {
                 TokenValue::Number(value) => Ok(Box::new(PrimaryEvaluator::Number(value.clone()))),
                 TokenValue::String(value) => Ok(Box::new(PrimaryEvaluator::String(value.clone()))),
-                TokenValue::Identifier(_) => {
-                    // Here we could use the resolver to resolve the identifier
-                    // For now, just create the evaluator
-                    Ok(Box::new(PrimaryEvaluator::from_raw_token(token)?))
-                }
+                TokenValue::Identifier(_) => Ok(Box::new(PrimaryEvaluator::from_raw_token(
+                    token,
+                    &context.resolver.borrow(),
+                )?)),
                 _ => Err(RuntimeError::ASTInvalidStructure),
             },
             PrimaryExpressionType::Expression(expr) => {
