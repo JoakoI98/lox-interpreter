@@ -10,7 +10,7 @@ pub use run::{Program, RunState};
 pub use runtime_value::{RuntimeError, RuntimeValue};
 
 // BuilderContext holds shared state for building evaluators and runnables
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BuilderContext {
     pub resolver: RefCell<resolver::Resolver>,
 }

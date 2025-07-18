@@ -17,7 +17,7 @@ pub enum ResolverError {
     NotEnoughSpace(#[from] TryReserveError),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
 }
