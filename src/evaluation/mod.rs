@@ -1,4 +1,5 @@
 mod evaluator;
+mod resolver;
 mod run;
 mod runtime_value;
 
