@@ -1,11 +1,12 @@
 use super::super::runtime_value::Result;
 use super::run::{ExpressionRunnable, PrintRunnable, ProgramRunnable, Runnable};
+use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
 use crate::evaluation::run::run::VarDeclarationRunnable;
 use crate::syntax_analysis::{Declaration, DeclarationType, VarDeclaration};
 use crate::tokenizer::TokenValue;
 use crate::{
     common::{Visitable, Visitor},
-    evaluation::{BinaryEvaluatorBuilder, RuntimeError},
+    evaluation::RuntimeError,
     syntax_analysis::{ExprStatement, PrintStatement, ProgramAst, Statement, StatementType},
 };
 
@@ -13,14 +14,14 @@ pub struct RunnableBuilder;
 
 impl Visitor<&PrintStatement, Result<Box<dyn Runnable>>> for RunnableBuilder {
     fn visit(&self, node: &PrintStatement) -> Result<Box<dyn Runnable>> {
-        let expr = node.expr.accept(&BinaryEvaluatorBuilder)?;
+        let expr = node.expr.accept(&AssignmentEvaluatorBuilder)?;
         Ok(Box::new(PrintRunnable::new(expr)))
     }
 }
 
 impl Visitor<&ExprStatement, Result<Box<dyn Runnable>>> for RunnableBuilder {
     fn visit(&self, node: &ExprStatement) -> Result<Box<dyn Runnable>> {
-        let expr = node.expr.accept(&BinaryEvaluatorBuilder)?;
+        let expr = node.expr.accept(&AssignmentEvaluatorBuilder)?;
         Ok(Box::new(ExpressionRunnable::new(expr)))
     }
 }
@@ -47,7 +48,7 @@ impl Visitor<&VarDeclaration, Result<Box<dyn Runnable>>> for RunnableBuilder {
         };
         let mut evaluable = None;
         if let Some(expr) = &node.expr {
-            evaluable = Some(expr.accept(&BinaryEvaluatorBuilder)?);
+            evaluable = Some(expr.accept(&AssignmentEvaluatorBuilder)?);
         }
         Ok(Box::new(VarDeclarationRunnable::new(
             ident_value,

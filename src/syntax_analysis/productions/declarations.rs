@@ -4,7 +4,7 @@ use ast_leaf::ast_leaf;
 
 use super::super::parsing::primitives::{Equal, Identifier, Semicolon, Var};
 use super::super::parsing::{ParseStream, Parser, Result};
-use super::expression::Expression;
+use super::assignments::Expression;
 
 use super::statement::Statement;
 use crate::common::Visitor;

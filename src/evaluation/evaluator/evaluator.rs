@@ -6,7 +6,7 @@ use crate::{
 use super::super::{RuntimeError, RuntimeValue};
 
 pub trait Evaluable: std::fmt::Debug {
-    fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError>;
+    fn eval(&self, state: &mut RunState) -> Result<RuntimeValue, RuntimeError>;
 }
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl PrimaryEvaluator {
 }
 
 impl Evaluable for PrimaryEvaluator {
-    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
+    fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
         match self {
             PrimaryEvaluator::Number(value) => Ok(RuntimeValue::Number(value.clone())),
             PrimaryEvaluator::String(value) => Ok(RuntimeValue::String(value.clone())),
@@ -86,7 +86,7 @@ impl UnaryEvaluator {
 }
 
 impl Evaluable for UnaryEvaluator {
-    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
+    fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
         let operand = self.operand.eval(run_state)?;
         match self.operation {
             UnaryOperation::Negation => -operand,
@@ -131,7 +131,7 @@ impl BinaryEvaluator {
 }
 
 impl Evaluable for BinaryEvaluator {
-    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
+    fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
         let left = self.left.eval(run_state)?;
         let right = self.right.eval(run_state)?;
         match self.operation {
@@ -146,5 +146,25 @@ impl Evaluable for BinaryEvaluator {
             BinaryOperation::LessThan => left.lt(&right),
             BinaryOperation::LessThanOrEqual => left.le(&right),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct AssignmentEvaluator {
+    identifier: EvaluableIdentifier,
+    value: Box<dyn Evaluable>,
+}
+
+impl AssignmentEvaluator {
+    pub(super) fn new(identifier: EvaluableIdentifier, value: Box<dyn Evaluable>) -> Self {
+        Self { identifier, value }
+    }
+}
+
+impl Evaluable for AssignmentEvaluator {
+    fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
+        let value = self.value.eval(run_state)?;
+        run_state.set_variable(self.identifier.identifier.clone(), value.clone());
+        Ok(value)
     }
 }

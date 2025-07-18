@@ -2,9 +2,12 @@ use super::super::runtime_value::{Result, RuntimeError};
 use super::evaluator::{BinaryEvaluator, BinaryOperation, UnaryEvaluator, UnaryOperation};
 use super::evaluator::{Evaluable, PrimaryEvaluator};
 use crate::common::Visitable;
+use crate::evaluation::evaluator::evaluator::AssignmentEvaluator;
+use crate::evaluation::evaluator::EvaluableIdentifier;
 use crate::syntax_analysis::{
-    Comparison, ComparisonType, Equality, EqualityType, Factor, FactorType, Term, TermType,
-    UnaryExpression, UnaryExpressionSelf, UnaryExpressionSelfType, UnaryExpressionType,
+    Assignment, AssignmentSelf, AssignmentType, Comparison, ComparisonType, Equality, EqualityType,
+    Factor, FactorType, Term, TermType, UnaryExpression, UnaryExpressionSelf,
+    UnaryExpressionSelfType, UnaryExpressionType,
 };
 use crate::tokenizer::TokenValue;
 use crate::{
@@ -32,7 +35,7 @@ impl Visitor<&PrimaryExpression, Result<Box<dyn Evaluable>>> for PrimaryEvaluato
                 TokenValue::Identifier(_) => Ok(Box::new(PrimaryEvaluator::from_raw_token(token)?)),
                 _ => Err(RuntimeError::ASTInvalidStructure),
             },
-            PrimaryExpressionType::Expression(expr) => expr.accept(&BinaryEvaluatorBuilder),
+            PrimaryExpressionType::Expression(expr) => expr.accept(&AssignmentEvaluatorBuilder),
             PrimaryExpressionType::None => Err(RuntimeError::ASTInvalidStructure),
         }
     }
@@ -141,5 +144,33 @@ impl Visitor<&Equality, Result<Box<dyn Evaluable>>> for BinaryEvaluatorBuilder {
             main_evaluator = Box::new(BinaryEvaluator::new(op, main_evaluator, right));
         }
         Ok(main_evaluator)
+    }
+}
+
+pub struct AssignmentEvaluatorBuilder;
+
+impl Visitor<&AssignmentSelf, Result<Box<dyn Evaluable>>> for AssignmentEvaluatorBuilder {
+    fn visit(&self, node: &AssignmentSelf) -> Result<Box<dyn Evaluable>> {
+        let ident_token = node
+            .token_list
+            .first()
+            .ok_or(RuntimeError::ASTInvalidStructure)?;
+        let ident_evaluator = EvaluableIdentifier::from_raw_token(ident_token)?;
+        let value_evaluator = node.assignment.accept(&AssignmentEvaluatorBuilder)?;
+        Ok(Box::new(AssignmentEvaluator::new(
+            ident_evaluator,
+            value_evaluator,
+        )))
+    }
+}
+
+impl Visitor<&Assignment, Result<Box<dyn Evaluable>>> for AssignmentEvaluatorBuilder {
+    fn visit(&self, node: &Assignment) -> Result<Box<dyn Evaluable>> {
+        // match &node.token_type {
+        //     AssignmentType::AssignmentSelf(expr) => expr.accept(&AssignmentEvaluatorBuilder),
+        //     AssignmentType::Equality(expr) => expr.accept(&BinaryEvaluatorBuilder),
+        //     _ => Err(RuntimeError::ASTInvalidStructure),
+        // }
+        node.eq.accept(&BinaryEvaluatorBuilder)
     }
 }

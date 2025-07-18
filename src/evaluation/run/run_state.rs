@@ -14,6 +14,10 @@ impl RunState {
             .insert(identifier, value.unwrap_or(RuntimeValue::Nil));
     }
 
+    pub fn set_variable(&mut self, identifier: String, value: RuntimeValue) {
+        self.declare_global_variable(identifier, Some(value));
+    }
+
     pub fn evaluate_global_variable(
         &self,
         identifier: &EvaluableIdentifier,

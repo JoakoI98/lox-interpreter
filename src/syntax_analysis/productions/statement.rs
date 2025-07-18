@@ -5,7 +5,7 @@ use ast_leaf::ast_leaf;
 use super::super::parsing::primitives::{Print, Semicolon};
 use super::super::parsing::{ParseStream, Parser, Result};
 
-use super::expression::Expression;
+use super::assignments::Expression;
 use crate::common::Visitor;
 
 #[ast_leaf("print" expr ";")]

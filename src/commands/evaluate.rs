@@ -1,15 +1,15 @@
 use super::{Command, CommandUtils};
 use crate::common::Visitable;
 use crate::error::Result;
-use crate::evaluation::{BinaryEvaluatorBuilder, RunState, RuntimeValue};
+use crate::evaluation::{AssignmentEvaluatorBuilder, RunState, RuntimeValue};
 use crate::syntax_analysis::Expression;
 
 pub struct EvaluateCommand;
 
 impl EvaluateCommand {
     fn evaluate_expression(&self, expression: &Expression) -> Result<RuntimeValue> {
-        let evaluator = expression.accept(&BinaryEvaluatorBuilder)?;
-        Ok(evaluator.eval(&RunState::default())?)
+        let evaluator = expression.accept(&AssignmentEvaluatorBuilder)?;
+        Ok(evaluator.eval(&mut RunState::default())?)
     }
 }
 

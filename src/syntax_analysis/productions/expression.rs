@@ -9,6 +9,7 @@ use super::super::parsing::primitives::{
 use super::super::parsing::{
     ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError,
 };
+use super::assignments::Expression;
 
 use crate::common::Visitor;
 use crate::tokenizer::Token;
@@ -176,18 +177,6 @@ impl Display for Equality {
         });
         let result = operation_display(self.main_comparison.to_string().as_str(), operations);
         write!(f, "{}", result)
-    }
-}
-
-pub type Expression = Box<Equality>;
-impl Parser for Expression {
-    fn parse(input: &mut ParseStream) -> Result<Self> {
-        let equality = input.parse::<Equality>()?;
-        Ok(Box::new(equality))
-    }
-
-    fn peek(input: &ParseStream) -> bool {
-        input.peek::<Equality>()
     }
 }
 
