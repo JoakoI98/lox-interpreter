@@ -1,18 +1,14 @@
 use super::super::super::runtime_value::{Result, RuntimeError};
 use super::super::super::BuilderContext;
-use super::super::evaluator::{BinaryEvaluator, BinaryOperation, UnaryEvaluator, UnaryOperation};
 use super::super::evaluator::{Evaluable, PrimaryEvaluator};
+use super::super::evaluator::{UnaryEvaluator, UnaryOperation};
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::evaluator_builders::assignment_evaluator_builder::AssignmentEvaluatorBuilder;
+use crate::syntax_analysis::{PrimaryExpression, PrimaryExpressionType};
 use crate::syntax_analysis::{
-    Comparison, ComparisonType, Equality, EqualityType, Factor, FactorType, Term, TermType,
     UnaryExpression, UnaryExpressionSelf, UnaryExpressionSelfType, UnaryExpressionType,
 };
 use crate::tokenizer::TokenValue;
-use crate::{
-    common::Visitor,
-    syntax_analysis::{PrimaryExpression, PrimaryExpressionType},
-};
 
 pub struct PrimaryEvaluatorBuilder;
 

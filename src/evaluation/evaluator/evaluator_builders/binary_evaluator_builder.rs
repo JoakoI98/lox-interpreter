@@ -1,5 +1,4 @@
 use super::super::Evaluable;
-use crate::common::Visitor;
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::evaluator::{BinaryEvaluator, BinaryOperation};
 use crate::evaluation::evaluator::evaluator_builders::primary_evaluator_builder::UnaryEvaluatorBuilder;

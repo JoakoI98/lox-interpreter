@@ -27,14 +27,6 @@ pub enum InterpreterError {
         #[source]
         source: std::io::Error,
     },
-
-    /// Unknown command error
-    #[error("Unknown command: {command}")]
-    UnknownCommand { command: String },
-
-    /// Usage error
-    #[error("Usage: {usage}")]
-    Usage { usage: String },
 }
 
 impl InterpreterError {
@@ -45,8 +37,6 @@ impl InterpreterError {
             InterpreterError::Parse(_) => 65,
             InterpreterError::Runtime(_) => 70,
             InterpreterError::Io { .. } => 1,
-            InterpreterError::UnknownCommand { .. } => 1,
-            InterpreterError::Usage { .. } => 1,
         }
     }
 
@@ -54,28 +44,9 @@ impl InterpreterError {
     pub fn io_error(filename: String, source: std::io::Error) -> Self {
         Self::Io { filename, source }
     }
-
-    /// Create an unknown command error
-    pub fn unknown_command(command: String) -> Self {
-        Self::UnknownCommand { command }
-    }
-
-    /// Create a usage error
-    pub fn usage(usage: String) -> Self {
-        Self::Usage { usage }
-    }
-
-    /// Handle multiple scanner errors at once
-    pub fn from_scanner_errors(errors: Vec<ScannerError>) -> Vec<Self> {
-        errors.into_iter().map(Self::Scanner).collect()
-    }
 }
 
-/// Convenience type alias for Results throughout the interpreter
 pub type Result<T> = std::result::Result<T, InterpreterError>;
-
-/// Convenience type alias for Results that can contain multiple errors
-pub type MultiResult<T> = std::result::Result<T, Vec<InterpreterError>>;
 
 #[cfg(test)]
 mod tests {

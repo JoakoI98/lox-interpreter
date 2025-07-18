@@ -7,6 +7,7 @@ pub trait VisitorWithContext<T, U, C> {
 }
 
 pub trait Visitable {
+    #[allow(dead_code)]
     fn accept<'a, T, U: Visitor<&'a Self, T>>(&'a self, visitor: &U) -> T {
         visitor.visit(self)
     }
