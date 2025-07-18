@@ -35,7 +35,7 @@ pub enum RuntimeError {
     #[error("Undefined variable '{0}'.\nLine: {1}")]
     UndefinedVariable(String, usize),
     #[error("Resolver error: {0}")]
-    ResolverError(super::resolver::ResolverError),
+    ResolverError(#[from] super::resolver::ResolverError),
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;

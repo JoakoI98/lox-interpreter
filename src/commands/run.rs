@@ -5,7 +5,7 @@ pub struct RunCommand;
 
 impl RunCommand {
     fn run_program(program_ast: ProgramAst) -> Result<()> {
-        let mut program = Program::new(program_ast)?;
+        let mut program = Program::new_with_context(program_ast)?;
         let result = program.run();
         if let Err(e) = &result {
             eprintln!("{}", e);

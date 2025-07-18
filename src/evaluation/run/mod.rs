@@ -6,6 +6,7 @@ use run::Runnable;
 pub use run_state::RunState;
 
 use crate::common::Visitable;
+use crate::evaluation::BuilderContext;
 use crate::{evaluation::RuntimeError, syntax_analysis::ProgramAst};
 use runnable_builders::RunnableBuilder;
 
@@ -15,8 +16,9 @@ pub struct Program {
 }
 
 impl Program {
-    pub fn new(program_ast: ProgramAst) -> Result<Self, RuntimeError> {
-        let runner = program_ast.accept(&RunnableBuilder)?;
+    pub fn new_with_context(program_ast: ProgramAst) -> Result<Self, RuntimeError> {
+        let context = BuilderContext::new()?;
+        let runner = program_ast.accept_with_context(&RunnableBuilder, &context)?;
         Ok(Self {
             program: runner,
             state: RunState::default(),
