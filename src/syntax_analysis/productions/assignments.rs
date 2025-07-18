@@ -35,6 +35,7 @@ impl Parser for Assignment {
             .peek1()
             .map(|token| token.token_type == TokenEnum::Identifier)
             .unwrap_or(false)
+            || input.peek::<Equality>()
     }
 }
 
