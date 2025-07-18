@@ -39,4 +39,8 @@ impl ParseStream {
     pub fn peek1(&self) -> Option<&Token> {
         self.tokens.get(self.current_index)
     }
+
+    pub fn peek_n(&self, n: usize) -> Option<&Token> {
+        self.tokens.get(self.current_index + n - 1)
+    }
 }

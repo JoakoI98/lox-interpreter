@@ -29,7 +29,10 @@ impl Command for RunCommand {
                 eprintln!("{}", e);
                 e.into()
             }),
-            Err(e) => Err(e.into()),
+            Err(e) => {
+                eprintln!("{}", e);
+                Err(e.into())
+            }
         }
     }
 }

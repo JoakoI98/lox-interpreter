@@ -26,7 +26,7 @@ impl RunState {
     }
 
     pub fn set_variable(&mut self, identifier: String, value: RuntimeValue, depth: Option<usize>) {
-        let i = self.scopes.len() - depth.unwrap_or(0);
+        let i = self.scopes.len() - depth.unwrap_or(0) - 1;
         self.scopes[i].insert(identifier, value);
     }
 

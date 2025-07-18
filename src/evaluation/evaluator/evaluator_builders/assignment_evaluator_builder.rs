@@ -4,29 +4,22 @@ use crate::evaluation::evaluator::evaluator::AssignmentEvaluator;
 use crate::evaluation::evaluator::evaluator_builders::binary_evaluator_builder::BinaryEvaluatorBuilder;
 use crate::evaluation::evaluator::EvaluableIdentifier;
 use crate::evaluation::runtime_value::Result;
-use crate::evaluation::{BuilderContext, RuntimeError};
+use crate::evaluation::BuilderContext;
 use crate::syntax_analysis::Assignment;
-use crate::syntax_analysis::AssignmentSelf;
+use crate::tokenizer::Token;
 
 pub struct AssignmentEvaluatorBuilder;
 
-impl VisitorWithContext<&AssignmentSelf, Result<Box<dyn Evaluable>>, BuilderContext>
-    for AssignmentEvaluatorBuilder
-{
-    fn visit_with_context(
-        &self,
-        node: &AssignmentSelf,
+impl AssignmentEvaluatorBuilder {
+    fn build_assignment_evaluator(
+        assignment: &Assignment,
+        ident_token: &Token,
         context: &BuilderContext,
     ) -> Result<Box<dyn Evaluable>> {
-        let ident_token = node
-            .token_list
-            .first()
-            .ok_or(RuntimeError::ASTInvalidStructure)?;
         let ident_evaluator =
             EvaluableIdentifier::from_raw_token(ident_token, &context.resolver.borrow())?;
-        let value_evaluator = node
-            .assignment
-            .accept_with_context(&AssignmentEvaluatorBuilder, context)?;
+        let value_evaluator =
+            assignment.accept_with_context(&AssignmentEvaluatorBuilder, context)?;
         Ok(Box::new(AssignmentEvaluator::new(
             ident_evaluator,
             value_evaluator,
@@ -42,8 +35,14 @@ impl VisitorWithContext<&Assignment, Result<Box<dyn Evaluable>>, BuilderContext>
         node: &Assignment,
         context: &BuilderContext,
     ) -> Result<Box<dyn Evaluable>> {
-        node.eq
-            .accept_with_context(&BinaryEvaluatorBuilder, context)
+        match node {
+            Assignment::Assignment(assignment, identifier) => {
+                Self::build_assignment_evaluator(assignment, &identifier.token, context)
+            }
+            Assignment::Evaluable(evaluable) => {
+                evaluable.accept_with_context(&BinaryEvaluatorBuilder, context)
+            }
+        }
     }
 }
 

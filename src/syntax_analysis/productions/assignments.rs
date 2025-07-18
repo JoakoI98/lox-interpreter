@@ -1,16 +1,57 @@
 use std::fmt::{Debug, Display};
 
 use super::expression::Equality;
-use ast_leaf::ast_leaf;
 
-use super::super::parsing::primitives::{Equal, Identifier};
 use super::super::parsing::{ParseStream, Parser, Result};
 
-use crate::common::Visitor;
-use crate::tokenizer::Token;
+use crate::syntax_analysis::parsing::primitives::{Equal, Identifier};
+use crate::tokenizer::{Token, TokenEnum};
 
-pub type AssignmentReference = Box<Assignment>;
-impl Parser for AssignmentReference {
+#[derive(Debug, PartialEq, Clone)]
+pub enum Assignment {
+    Assignment(Box<Assignment>, Identifier),
+    Evaluable(Equality),
+}
+impl crate::common::Visitable for Assignment {}
+impl Parser for Assignment {
+    fn parse(input: &mut ParseStream) -> Result<Self> {
+        let is_assignment = input
+            .peek_n(2)
+            .map(|t| t.token_type == TokenEnum::Equal)
+            .unwrap_or(false);
+        if is_assignment {
+            let identifier = input.parse::<Identifier>()?;
+            input.parse::<Equal>()?;
+            let assignment = input.parse::<Assignment>()?;
+            Ok(Assignment::Assignment(Box::new(assignment), identifier))
+        } else {
+            let evaluable = input.parse::<Equality>()?;
+            Ok(Assignment::Evaluable(evaluable))
+        }
+    }
+
+    fn peek(input: &ParseStream) -> bool {
+        input
+            .peek1()
+            .map(|token| token.token_type == TokenEnum::Identifier)
+            .unwrap_or(false)
+    }
+}
+
+impl Display for Assignment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Assignment::Assignment(assignment, identifier) => {
+                write!(f, "{} = {}", identifier, assignment)
+            }
+            Assignment::Evaluable(evaluable) => write!(f, "{}", evaluable),
+        }
+    }
+}
+
+pub type Expression = Box<Assignment>;
+
+impl Parser for Expression {
     fn parse(input: &mut ParseStream) -> Result<Self> {
         let assignment = input.parse::<Assignment>()?;
         Ok(Box::new(assignment))
@@ -20,36 +61,3 @@ impl Parser for AssignmentReference {
         input.peek::<Assignment>()
     }
 }
-
-#[ast_leaf("IDENT" "=" assignment)]
-#[derive(Debug, PartialEq, Clone)]
-pub struct AssignmentSelf {
-    #[Type]
-    pub token_type: AssignmentSelfType,
-    pub assignment: AssignmentReference,
-    #[TokenList]
-    pub token_list: Vec<Token>,
-}
-
-impl Display for AssignmentSelf {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let token = self.token_list.first().ok_or(std::fmt::Error)?;
-        write!(f, "({} = {})", token, self.assignment)
-    }
-}
-
-#[ast_leaf(eq)]
-#[derive(Debug, PartialEq, Clone)]
-pub struct Assignment {
-    #[Type]
-    pub token_type: AssignmentType,
-    pub eq: Equality,
-}
-
-impl Display for Assignment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.eq)
-    }
-}
-
-pub type Expression = Box<Assignment>;

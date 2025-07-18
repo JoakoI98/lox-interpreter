@@ -9,7 +9,7 @@ pub use productions::expression::{
     UnaryExpressionSelfType, UnaryExpressionType,
 };
 
-pub use productions::assignments::{Assignment, AssignmentSelf, Expression};
+pub use productions::assignments::{Assignment, Expression};
 
 pub use productions::declarations::{Declaration, DeclarationType, ProgramAst, VarDeclaration};
 
