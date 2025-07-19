@@ -3,12 +3,12 @@ use std::fmt::Debug;
 use ast_leaf::ast_leaf;
 
 use super::super::parsing::primitives::{
-    Else, If, LeftBrace, LeftParen, Print, RightBrace, RightParen, Semicolon, While,
+    Else, For, If, LeftBrace, LeftParen, Print, RightBrace, RightParen, Semicolon, While,
 };
 use super::super::parsing::{ParseStream, Parser, Result};
 
 use super::assignments::Expression;
-use crate::syntax_analysis::Declaration;
+use crate::syntax_analysis::{Declaration, VarDeclaration};
 
 #[ast_leaf("print" expr ";")]
 #[derive(Debug, PartialEq, Clone)]
@@ -26,7 +26,7 @@ pub struct ExprStatement {
     pub expr: Expression,
 }
 
-#[ast_leaf((ExprStatement | PrintStatement | Block | IfStatement | WhileStatement))]
+#[ast_leaf((ExprStatement | PrintStatement | Block | IfStatement | WhileStatement | ForStatement))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Statement {
     #[Type]
@@ -70,5 +70,23 @@ pub struct WhileStatement {
     #[Type]
     pub token_type: WhileStatementType,
     pub eval_expr: Expression,
+    pub statement: StatementReference,
+}
+
+#[ast_leaf((expr)?)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct MaybeExpression {
+    #[Type]
+    pub token_type: MaybeExpressionType,
+    pub expr: Option<Expression>,
+}
+
+#[ast_leaf("for" "(" ((VarDeclaration | ExprStatement | ";")) condition ";" increment ")" statement)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct ForStatement {
+    #[Type]
+    pub token_type: ForStatementType,
+    pub condition: MaybeExpression,
+    pub increment: MaybeExpression,
     pub statement: StatementReference,
 }

@@ -4,9 +4,12 @@ use super::run::{
     ExpressionRunnable, IsStatementRunnable, PrintRunnable, ProgramRunnable, Runnable,
 };
 use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
-use crate::evaluation::run::run::{BlockRunnable, VarDeclarationRunnable, WhileStatementRunnable};
+use crate::evaluation::run::run::{
+    BlockRunnable, ForStatementRunnable, VarDeclarationRunnable, WhileStatementRunnable,
+};
 use crate::syntax_analysis::{
-    Declaration, DeclarationType, IfStatement, VarDeclaration, WhileStatement,
+    Declaration, DeclarationType, ForStatement, ForStatementType, IfStatement, VarDeclaration,
+    WhileStatement,
 };
 use crate::tokenizer::TokenValue;
 use crate::{
@@ -61,6 +64,7 @@ impl VisitorWithContext<&Statement, Result<Box<dyn Runnable>>, BuilderContext> f
             StatementType::WhileStatement(while_stmt) => {
                 while_stmt.accept_with_context(&Self, context)
             }
+            StatementType::ForStatement(for_stmt) => for_stmt.accept_with_context(&Self, context),
             StatementType::None => Err(RuntimeError::ASTInvalidStructure),
         }
     }
@@ -183,5 +187,46 @@ impl VisitorWithContext<&WhileStatement, Result<Box<dyn Runnable>>, BuilderConte
             .accept_with_context(&AssignmentEvaluatorBuilder, context)?;
         let statement = node.statement.accept_with_context(&Self, context)?;
         Ok(Box::new(WhileStatementRunnable::new(eval_expr, statement)))
+    }
+}
+
+impl VisitorWithContext<&ForStatement, Result<Box<dyn Runnable>>, BuilderContext>
+    for RunnableBuilder
+{
+    fn visit_with_context(
+        &self,
+        node: &ForStatement,
+        context: &BuilderContext,
+    ) -> Result<Box<dyn Runnable>> {
+        context.resolver.borrow_mut().enter_scope()?;
+        let var_declaration = match &node.token_type {
+            ForStatementType::VarDeclaration(var) => Some(var.accept_with_context(&Self, context)?),
+            ForStatementType::ExprStatement(expr) => {
+                Some(expr.accept_with_context(&Self, context)?)
+            }
+            ForStatementType::Semicolon => None,
+            ForStatementType::None => return Err(RuntimeError::ASTInvalidStructure),
+        };
+
+        let condition = node
+            .condition
+            .expr
+            .as_ref()
+            .map(|expr| expr.accept_with_context(&AssignmentEvaluatorBuilder, context))
+            .transpose()?;
+        let increment = node
+            .increment
+            .expr
+            .as_ref()
+            .map(|expr| expr.accept_with_context(&AssignmentEvaluatorBuilder, context))
+            .transpose()?;
+        let statement = node.statement.accept_with_context(&Self, context)?;
+        context.resolver.borrow_mut().exit_scope()?;
+        Ok(Box::new(ForStatementRunnable::new(
+            var_declaration,
+            condition,
+            increment,
+            statement,
+        )))
     }
 }

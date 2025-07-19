@@ -442,9 +442,6 @@ impl Group {
             return quote! {};
         }
         let or_elements = self.or_elements.as_ref();
-        if or_elements.is_none() {
-            return quote! {};
-        }
         let non_terminal = non_terminal.unwrap();
         let non_terminal_name = Ident::new(non_terminal.get_name(), Span::call_site());
         let non_terminal_type = non_terminal.get_type();

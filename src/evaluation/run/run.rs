@@ -158,3 +158,54 @@ impl Runnable for WhileStatementRunnable {
         Ok(())
     }
 }
+
+pub struct ForStatementRunnable {
+    var_declaration: Option<Box<dyn Runnable>>,
+    condition: Option<Box<dyn Evaluable>>,
+    increment: Option<Box<dyn Evaluable>>,
+    statement: Box<dyn Runnable>,
+}
+
+impl ForStatementRunnable {
+    pub(super) fn new(
+        var_declaration: Option<Box<dyn Runnable>>,
+        condition: Option<Box<dyn Evaluable>>,
+        increment: Option<Box<dyn Evaluable>>,
+        statement: Box<dyn Runnable>,
+    ) -> Self {
+        Self {
+            var_declaration,
+            condition,
+            increment,
+            statement,
+        }
+    }
+
+    fn eval_condition(&self, state: &mut RunState) -> RuntimeResult<bool> {
+        Ok(self
+            .condition
+            .as_ref()
+            .map(|c| c.eval(state))
+            .transpose()?
+            .map(|c| c.to_bool())
+            .transpose()?
+            .unwrap_or(true))
+    }
+}
+
+impl Runnable for ForStatementRunnable {
+    fn run(&self, state: &mut RunState) -> RunResult {
+        state.enter_scope()?;
+        if let Some(var_declaration) = &self.var_declaration {
+            var_declaration.run(state)?;
+        }
+        while self.eval_condition(state)? {
+            self.statement.run(state)?;
+            if let Some(increment) = &self.increment {
+                increment.eval(state)?;
+            }
+        }
+        state.exit_scope()?;
+        Ok(())
+    }
+}
