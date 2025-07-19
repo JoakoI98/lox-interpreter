@@ -26,15 +26,15 @@ impl FunctionEvaluator {
 impl Evaluable for FunctionEvaluator {
     fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError> {
         let callable = self.callable.eval(state)?;
-        let _index = match callable {
+        let index = match callable {
             RuntimeValue::Callable(index) => index,
             _ => return Err(FunctionEvaluationError::UnCallableFunction(callable).into()),
         };
-        let _arguments = self
+        let arguments = self
             .arguments
             .iter()
             .map(|arg| arg.eval(state))
             .collect::<Result<Vec<RuntimeValue>, RuntimeError>>()?;
-        Ok(RuntimeValue::Nil)
+        state.call_function(index, arguments)
     }
 }

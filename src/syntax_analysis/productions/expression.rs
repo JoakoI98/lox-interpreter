@@ -10,6 +10,7 @@ use super::super::parsing::{
     ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError,
 };
 use super::assignments::Expression;
+use super::functions::Call;
 
 use crate::tokenizer::Token;
 
@@ -63,7 +64,7 @@ impl Display for UnaryExpressionSelf {
     }
 }
 
-#[ast_leaf((UnaryExpressionSelf | PrimaryExpression))]
+#[ast_leaf((UnaryExpressionSelf | Call))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct UnaryExpression {
     #[Type]
@@ -73,7 +74,7 @@ pub struct UnaryExpression {
 impl Display for UnaryExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.token_type {
-            UnaryExpressionType::PrimaryExpression(expr) => write!(f, "{}", expr),
+            UnaryExpressionType::Call(expr) => write!(f, "{}", expr),
             UnaryExpressionType::UnaryExpressionSelf(expr) => write!(f, "{}", expr),
             _ => write!(f, ""),
         }

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::super::parsing::{ParseStream, Parser, Result};
 use ast_leaf::ast_leaf;
 
@@ -44,4 +46,10 @@ pub struct Call {
     pub token_type: CallType,
     pub primary: PrimaryExpression,
     pub arguments_list: Vec<(CallType, ArgumentsList)>,
+}
+
+impl Display for Call {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.primary)
+    }
 }

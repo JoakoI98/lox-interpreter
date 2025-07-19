@@ -4,6 +4,7 @@ use super::super::evaluator::{Evaluable, PrimaryEvaluator};
 use super::super::evaluator::{UnaryEvaluator, UnaryOperation};
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::evaluator_builders::assignment_evaluator_builder::AssignmentEvaluatorBuilder;
+use crate::evaluation::evaluator::evaluator_builders::function_call_evaluator_builder::FunctionCallEvaluatorBuilder;
 use crate::syntax_analysis::{PrimaryExpression, PrimaryExpressionType};
 use crate::syntax_analysis::{
     UnaryExpression, UnaryExpressionSelf, UnaryExpressionSelfType, UnaryExpressionType,
@@ -58,8 +59,8 @@ impl VisitorWithContext<&UnaryExpression, Result<Box<dyn Evaluable>>, BuilderCon
         context: &BuilderContext,
     ) -> Result<Box<dyn Evaluable>> {
         match &node.token_type {
-            UnaryExpressionType::PrimaryExpression(expr) => {
-                expr.accept_with_context(&PrimaryEvaluatorBuilder, context)
+            UnaryExpressionType::Call(expr) => {
+                expr.accept_with_context(&FunctionCallEvaluatorBuilder, context)
             }
             UnaryExpressionType::UnaryExpressionSelf(expr) => {
                 expr.accept_with_context(&UnaryEvaluatorBuilder, context)
