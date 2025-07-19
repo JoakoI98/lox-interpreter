@@ -4,8 +4,10 @@ use super::run::{
     ExpressionRunnable, IsStatementRunnable, PrintRunnable, ProgramRunnable, Runnable,
 };
 use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
-use crate::evaluation::run::run::{BlockRunnable, VarDeclarationRunnable};
-use crate::syntax_analysis::{Declaration, DeclarationType, IfStatement, VarDeclaration};
+use crate::evaluation::run::run::{BlockRunnable, VarDeclarationRunnable, WhileStatementRunnable};
+use crate::syntax_analysis::{
+    Declaration, DeclarationType, IfStatement, VarDeclaration, WhileStatement,
+};
 use crate::tokenizer::TokenValue;
 use crate::{
     common::{Visitable, VisitorWithContext},
@@ -56,6 +58,9 @@ impl VisitorWithContext<&Statement, Result<Box<dyn Runnable>>, BuilderContext> f
             StatementType::PrintStatement(print) => print.accept_with_context(&Self, context),
             StatementType::Block(block) => block.accept_with_context(&Self, context),
             StatementType::IfStatement(if_stmt) => if_stmt.accept_with_context(&Self, context),
+            StatementType::WhileStatement(while_stmt) => {
+                while_stmt.accept_with_context(&Self, context)
+            }
             StatementType::None => Err(RuntimeError::ASTInvalidStructure),
         }
     }
@@ -162,5 +167,21 @@ impl VisitorWithContext<&IfStatement, Result<Box<dyn Runnable>>, BuilderContext>
         Ok(Box::new(IsStatementRunnable::new(
             if_expr, true_block, else_block,
         )))
+    }
+}
+
+impl VisitorWithContext<&WhileStatement, Result<Box<dyn Runnable>>, BuilderContext>
+    for RunnableBuilder
+{
+    fn visit_with_context(
+        &self,
+        node: &WhileStatement,
+        context: &BuilderContext,
+    ) -> Result<Box<dyn Runnable>> {
+        let eval_expr = node
+            .eval_expr
+            .accept_with_context(&AssignmentEvaluatorBuilder, context)?;
+        let statement = node.statement.accept_with_context(&Self, context)?;
+        Ok(Box::new(WhileStatementRunnable::new(eval_expr, statement)))
     }
 }

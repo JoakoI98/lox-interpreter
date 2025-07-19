@@ -135,3 +135,26 @@ impl Runnable for IsStatementRunnable {
         Ok(())
     }
 }
+
+pub struct WhileStatementRunnable {
+    eval_expr: Box<dyn Evaluable>,
+    statement: Box<dyn Runnable>,
+}
+
+impl WhileStatementRunnable {
+    pub(super) fn new(eval_expr: Box<dyn Evaluable>, statement: Box<dyn Runnable>) -> Self {
+        Self {
+            eval_expr,
+            statement,
+        }
+    }
+}
+
+impl Runnable for WhileStatementRunnable {
+    fn run(&self, state: &mut RunState) -> RunResult {
+        while self.eval_expr.eval(state)?.to_bool()? {
+            self.statement.run(state)?;
+        }
+        Ok(())
+    }
+}

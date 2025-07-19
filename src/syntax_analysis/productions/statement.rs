@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use ast_leaf::ast_leaf;
 
 use super::super::parsing::primitives::{
-    Else, If, LeftBrace, LeftParen, Print, RightBrace, RightParen, Semicolon,
+    Else, If, LeftBrace, LeftParen, Print, RightBrace, RightParen, Semicolon, While,
 };
 use super::super::parsing::{ParseStream, Parser, Result};
 
@@ -26,7 +26,7 @@ pub struct ExprStatement {
     pub expr: Expression,
 }
 
-#[ast_leaf((ExprStatement | PrintStatement | Block | IfStatement))]
+#[ast_leaf((ExprStatement | PrintStatement | Block | IfStatement | WhileStatement))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Statement {
     #[Type]
@@ -62,4 +62,13 @@ pub struct IfStatement {
     pub bool_expr: Expression,
     pub true_statement: StatementReference,
     pub false_statement: Option<StatementReference>,
+}
+
+#[ast_leaf("while" "(" eval_expr ")" statement )]
+#[derive(Debug, PartialEq, Clone)]
+pub struct WhileStatement {
+    #[Type]
+    pub token_type: WhileStatementType,
+    pub eval_expr: Expression,
+    pub statement: StatementReference,
 }
