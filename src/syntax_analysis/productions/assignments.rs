@@ -5,7 +5,7 @@ use super::expression::LogicalOr;
 use super::super::parsing::{ParseStream, Parser, Result};
 
 use crate::syntax_analysis::parsing::primitives::{Equal, Identifier};
-use crate::tokenizer::{Token, TokenEnum};
+use crate::tokenizer::TokenEnum;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Assignment {

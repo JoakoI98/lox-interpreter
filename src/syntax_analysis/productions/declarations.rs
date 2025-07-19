@@ -7,7 +7,6 @@ use super::super::parsing::{ParseStream, Parser, Result};
 use super::assignments::Expression;
 
 use super::statement::Statement;
-use crate::common::Visitor;
 use crate::tokenizer::Token;
 
 #[ast_leaf("var" "IDENT" (("=") expr)? ";")]
