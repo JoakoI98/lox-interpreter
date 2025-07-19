@@ -39,7 +39,7 @@ impl BinaryEvaluator {
 }
 
 impl Evaluable for BinaryEvaluator {
-    fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
+    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
         match self.operation {
             // Short circuit evaluation
             BinaryOperation::LogicalAnd => {

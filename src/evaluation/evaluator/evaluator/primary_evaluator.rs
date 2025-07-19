@@ -22,7 +22,7 @@ impl PrimaryEvaluator {
 }
 
 impl Evaluable for PrimaryEvaluator {
-    fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
+    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
         match self {
             PrimaryEvaluator::Number(value) => Ok(RuntimeValue::Number(value.clone())),
             PrimaryEvaluator::String(value) => Ok(RuntimeValue::String(value.clone())),

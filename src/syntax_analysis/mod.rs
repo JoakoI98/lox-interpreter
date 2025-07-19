@@ -17,3 +17,5 @@ pub use productions::statement::{
     Block, ExprStatement, ForStatement, ForStatementType, IfStatement, PrintStatement, Statement,
     StatementType, WhileStatement,
 };
+
+pub use productions::functions::{ArgumentsList, Call};

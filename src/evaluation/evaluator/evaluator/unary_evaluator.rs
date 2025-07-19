@@ -20,7 +20,7 @@ impl UnaryEvaluator {
 }
 
 impl Evaluable for UnaryEvaluator {
-    fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
+    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
         let operand = self.operand.eval(run_state)?;
         match self.operation {
             UnaryOperation::Negation => -operand,

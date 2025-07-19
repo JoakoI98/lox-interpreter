@@ -14,7 +14,7 @@ impl AssignmentEvaluator {
 }
 
 impl Evaluable for AssignmentEvaluator {
-    fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
+    fn eval(&self, run_state: &RunState) -> Result<RuntimeValue, RuntimeError> {
         let value = self.value.eval(run_state)?;
         run_state.set_variable(
             self.identifier.identifier().to_string(),

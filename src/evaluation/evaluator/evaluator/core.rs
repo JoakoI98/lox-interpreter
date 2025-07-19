@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub trait Evaluable: std::fmt::Debug {
-    fn eval(&self, state: &mut RunState) -> Result<RuntimeValue, RuntimeError>;
+    fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError>;
 }
 
 #[derive(Debug)]

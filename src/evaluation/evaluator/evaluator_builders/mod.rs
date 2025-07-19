@@ -1,5 +1,6 @@
 mod assignment_evaluator_builder;
 mod binary_evaluator_builder;
+mod function_call_evaluator_builder;
 mod primary_evaluator_builder;
 
 pub use assignment_evaluator_builder::AssignmentEvaluatorBuilder;

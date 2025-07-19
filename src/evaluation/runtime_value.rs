@@ -5,11 +5,14 @@ use std::{
 
 use thiserror::Error;
 
+use crate::evaluation::run::NativeFunctionError;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum RuntimeValue {
     Number(f64),
     String(String),
     Boolean(bool),
+    Callable(usize),
     Nil,
 }
 
@@ -20,6 +23,7 @@ impl Display for RuntimeValue {
             RuntimeValue::String(s) => write!(f, "{}", s),
             RuntimeValue::Boolean(b) => write!(f, "{}", b),
             RuntimeValue::Nil => write!(f, "nil"),
+            RuntimeValue::Callable(index) => write!(f, "function[{}]", index),
         }
     }
 }
@@ -36,6 +40,16 @@ pub enum RuntimeError {
     UndefinedVariable(String, usize),
     #[error("{0}")]
     ResolverError(#[from] super::resolver::ResolverError),
+    #[error("{0}")]
+    FunctionsResolverError(#[from] super::functions_resolver::FunctionsResolverError),
+    #[error("{0}")]
+    FunctionEvaluationError(#[from] super::evaluator::FunctionEvaluationError),
+    #[error("Arity mismatch")]
+    ArityMismatch,
+    #[error("{0}")]
+    NativeFunctionError(#[from] NativeFunctionError),
+    #[error("Function not found")]
+    FunctionNotFound,
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
