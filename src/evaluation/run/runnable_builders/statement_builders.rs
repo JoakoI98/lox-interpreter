@@ -1,24 +1,17 @@
-use super::super::runtime_value::Result;
-use super::super::BuilderContext;
-use super::runnable::{
-    ExpressionRunnable, IsStatementRunnable, PrintRunnable, ProgramRunnable, Runnable,
-};
+use super::declaration_builders::RunnableBuilder;
+use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
 use crate::evaluation::run::runnable::{
-    BlockRunnable, ForStatementRunnable, VarDeclarationRunnable, WhileStatementRunnable,
+    ExpressionRunnable, ForStatementRunnable, IsStatementRunnable, PrintRunnable, Runnable,
+    WhileStatementRunnable,
 };
+use crate::evaluation::runtime_value::Result;
+use crate::evaluation::BuilderContext;
+use crate::evaluation::RuntimeError;
 use crate::syntax_analysis::{
-    Declaration, DeclarationType, ForStatement, ForStatementType, IfStatement, VarDeclaration,
-    WhileStatement,
+    ExprStatement, ForStatement, ForStatementType, IfStatement, PrintStatement, Statement,
+    StatementType, WhileStatement,
 };
-use crate::tokenizer::TokenValue;
-use crate::{
-    common::{Visitable, VisitorWithContext},
-    evaluation::RuntimeError,
-    syntax_analysis::{Block, ExprStatement, PrintStatement, ProgramAst, Statement, StatementType},
-};
-
-pub struct RunnableBuilder;
 
 impl VisitorWithContext<&PrintStatement, Result<Box<dyn Runnable>>, BuilderContext>
     for RunnableBuilder
@@ -67,87 +60,6 @@ impl VisitorWithContext<&Statement, Result<Box<dyn Runnable>>, BuilderContext> f
             StatementType::ForStatement(for_stmt) => for_stmt.accept_with_context(&Self, context),
             StatementType::None => Err(RuntimeError::ASTInvalidStructure),
         }
-    }
-}
-
-impl VisitorWithContext<&VarDeclaration, Result<Box<dyn Runnable>>, BuilderContext>
-    for RunnableBuilder
-{
-    fn visit_with_context(
-        &self,
-        node: &VarDeclaration,
-        context: &BuilderContext,
-    ) -> Result<Box<dyn Runnable>> {
-        let ident_token = node
-            .token_list
-            .get(1)
-            .ok_or(RuntimeError::ASTInvalidStructure)?;
-        let ident_value = match &ident_token.token_value {
-            TokenValue::Identifier(_) => ident_token.lexeme.clone(),
-            _ => return Err(RuntimeError::ASTInvalidStructure),
-        };
-
-        let mut evaluable = None;
-        context.resolver.borrow_mut().declare(&ident_value)?;
-        if let Some(expr) = &node.expr {
-            evaluable = Some(expr.accept_with_context(&AssignmentEvaluatorBuilder, context)?);
-        }
-        context.resolver.borrow_mut().define(&ident_value)?;
-
-        Ok(Box::new(VarDeclarationRunnable::new(
-            ident_value,
-            evaluable,
-        )))
-    }
-}
-
-impl VisitorWithContext<&Declaration, Result<Box<dyn Runnable>>, BuilderContext>
-    for RunnableBuilder
-{
-    fn visit_with_context(
-        &self,
-        node: &Declaration,
-        context: &BuilderContext,
-    ) -> Result<Box<dyn Runnable>> {
-        match &node.token_type {
-            DeclarationType::VarDeclaration(var) => var.accept_with_context(&Self, context),
-            DeclarationType::Statement(stmt) => stmt.accept_with_context(&Self, context),
-            DeclarationType::None => Err(RuntimeError::ASTInvalidStructure),
-        }
-    }
-}
-
-impl VisitorWithContext<&ProgramAst, Result<Box<dyn Runnable>>, BuilderContext>
-    for RunnableBuilder
-{
-    fn visit_with_context(
-        &self,
-        node: &ProgramAst,
-        context: &BuilderContext,
-    ) -> Result<Box<dyn Runnable>> {
-        let statements = node
-            .statements
-            .iter()
-            .map(|(_, stmt)| stmt.accept_with_context(&Self, context))
-            .collect::<Result<Vec<Box<dyn Runnable>>>>()?;
-        Ok(Box::new(ProgramRunnable::new(statements)))
-    }
-}
-
-impl VisitorWithContext<&Block, Result<Box<dyn Runnable>>, BuilderContext> for RunnableBuilder {
-    fn visit_with_context(
-        &self,
-        node: &Block,
-        context: &BuilderContext,
-    ) -> Result<Box<dyn Runnable>> {
-        context.resolver.borrow_mut().enter_scope()?;
-        let declarations = node
-            .declarations
-            .iter()
-            .map(|(_, stmt)| stmt.accept_with_context(&Self, context))
-            .collect::<Result<Vec<Box<dyn Runnable>>>>()?;
-        context.resolver.borrow_mut().exit_scope()?;
-        Ok(Box::new(BlockRunnable::new(declarations)))
     }
 }
 
