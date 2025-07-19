@@ -1,6 +1,6 @@
 mod evaluator;
 mod evaluator_builders;
 
-pub use evaluator::Evaluable;
-pub use evaluator::EvaluableIdentifier;
+// Re-export from the evaluator module
+pub use evaluator::*;
 pub use evaluator_builders::AssignmentEvaluatorBuilder;
