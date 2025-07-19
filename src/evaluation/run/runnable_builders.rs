@@ -1,9 +1,11 @@
 use super::super::runtime_value::Result;
 use super::super::BuilderContext;
-use super::run::{ExpressionRunnable, PrintRunnable, ProgramRunnable, Runnable};
+use super::run::{
+    ExpressionRunnable, IsStatementRunnable, PrintRunnable, ProgramRunnable, Runnable,
+};
 use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
 use crate::evaluation::run::run::{BlockRunnable, VarDeclarationRunnable};
-use crate::syntax_analysis::{Declaration, DeclarationType, VarDeclaration};
+use crate::syntax_analysis::{Declaration, DeclarationType, IfStatement, VarDeclaration};
 use crate::tokenizer::TokenValue;
 use crate::{
     common::{Visitable, VisitorWithContext},
@@ -53,6 +55,7 @@ impl VisitorWithContext<&Statement, Result<Box<dyn Runnable>>, BuilderContext> f
             StatementType::ExprStatement(expr) => expr.accept_with_context(&Self, context),
             StatementType::PrintStatement(print) => print.accept_with_context(&Self, context),
             StatementType::Block(block) => block.accept_with_context(&Self, context),
+            StatementType::IfStatement(if_stmt) => if_stmt.accept_with_context(&Self, context),
             StatementType::None => Err(RuntimeError::ASTInvalidStructure),
         }
     }
@@ -136,5 +139,28 @@ impl VisitorWithContext<&Block, Result<Box<dyn Runnable>>, BuilderContext> for R
             .collect::<Result<Vec<Box<dyn Runnable>>>>()?;
         context.resolver.borrow_mut().exit_scope()?;
         Ok(Box::new(BlockRunnable::new(declarations)))
+    }
+}
+
+impl VisitorWithContext<&IfStatement, Result<Box<dyn Runnable>>, BuilderContext>
+    for RunnableBuilder
+{
+    fn visit_with_context(
+        &self,
+        node: &IfStatement,
+        context: &BuilderContext,
+    ) -> Result<Box<dyn Runnable>> {
+        let if_expr = node
+            .bool_expr
+            .accept_with_context(&AssignmentEvaluatorBuilder, context)?;
+        let true_block = node.true_statement.accept_with_context(&Self, context)?;
+        let else_block = node
+            .false_statement
+            .as_ref()
+            .map(|block| block.accept_with_context(&Self, context))
+            .transpose()?;
+        Ok(Box::new(IsStatementRunnable::new(
+            if_expr, true_block, else_block,
+        )))
     }
 }

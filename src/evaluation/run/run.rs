@@ -103,3 +103,35 @@ impl Runnable for BlockRunnable {
         Ok(())
     }
 }
+
+pub struct IsStatementRunnable {
+    if_expr: Box<dyn Evaluable>,
+    true_block: Box<dyn Runnable>,
+    else_block: Option<Box<dyn Runnable>>,
+}
+
+impl IsStatementRunnable {
+    pub(super) fn new(
+        if_expr: Box<dyn Evaluable>,
+        true_block: Box<dyn Runnable>,
+        else_block: Option<Box<dyn Runnable>>,
+    ) -> Self {
+        Self {
+            if_expr,
+            true_block,
+            else_block,
+        }
+    }
+}
+
+impl Runnable for IsStatementRunnable {
+    fn run(&self, state: &mut RunState) -> RunResult {
+        let is_true = self.if_expr.eval(state)?.to_bool()?;
+        if is_true {
+            self.true_block.run(state)?;
+        } else if let Some(else_block) = &self.else_block {
+            else_block.run(state)?;
+        }
+        Ok(())
+    }
+}

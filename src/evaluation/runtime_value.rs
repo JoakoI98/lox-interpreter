@@ -43,12 +43,7 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 impl Not for RuntimeValue {
     type Output = Result<RuntimeValue>;
     fn not(self) -> Self::Output {
-        match self {
-            RuntimeValue::Boolean(b) => Ok(RuntimeValue::Boolean(!b)),
-            RuntimeValue::Number(f) => Ok(RuntimeValue::Boolean(f == 0.0)),
-            RuntimeValue::String(str) => Ok(RuntimeValue::Boolean(str.is_empty())),
-            RuntimeValue::Nil => Ok(RuntimeValue::Boolean(true)),
-        }
+        self.to_bool().map(|b| RuntimeValue::Boolean(!b))
     }
 }
 
@@ -118,6 +113,15 @@ impl Sub for RuntimeValue {
 }
 
 impl RuntimeValue {
+    pub fn to_bool(&self) -> Result<bool> {
+        match self {
+            RuntimeValue::Boolean(b) => Ok(*b),
+            RuntimeValue::Number(f) => Ok(*f != 0.0),
+            RuntimeValue::String(s) => Ok(!s.is_empty()),
+            RuntimeValue::Nil => Ok(false),
+        }
+    }
+
     pub fn lt(&self, rhs: &RuntimeValue) -> Result<RuntimeValue> {
         match (&self, &rhs) {
             (RuntimeValue::Number(f1), RuntimeValue::Number(f2)) => {
