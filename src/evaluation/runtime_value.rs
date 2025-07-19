@@ -116,9 +116,8 @@ impl RuntimeValue {
     pub fn to_bool(&self) -> Result<bool> {
         match self {
             RuntimeValue::Boolean(b) => Ok(*b),
-            RuntimeValue::Number(f) => Ok(*f != 0.0),
-            RuntimeValue::String(s) => Ok(!s.is_empty()),
             RuntimeValue::Nil => Ok(false),
+            _ => Ok(true),
         }
     }
 

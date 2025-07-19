@@ -149,7 +149,10 @@ impl Evaluable for BinaryEvaluator {
                     return Ok(RuntimeValue::Boolean(false));
                 }
                 let right = self.right.eval(run_state)?;
-                return Ok(RuntimeValue::Boolean(right.to_bool()?));
+                if !right.to_bool()? {
+                    return Ok(RuntimeValue::Boolean(false));
+                }
+                return Ok(right);
             }
             BinaryOperation::LogicalOr => {
                 let left = self.left.eval(run_state)?;
