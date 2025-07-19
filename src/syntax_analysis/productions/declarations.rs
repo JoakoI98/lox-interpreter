@@ -2,11 +2,12 @@ use std::fmt::Debug;
 
 use ast_leaf::ast_leaf;
 
-use super::super::parsing::primitives::{Equal, Identifier, Semicolon, Var};
+use super::super::parsing::primitives::{Equal, Fun, Identifier, Semicolon, Var};
 use super::super::parsing::{ParseStream, Parser, Result};
 use super::assignments::Expression;
 
 use super::statement::Statement;
+use crate::syntax_analysis::productions::functions::Function;
 use crate::tokenizer::Token;
 
 #[ast_leaf("var" "IDENT" (("=") expr)? ";")]
@@ -19,7 +20,15 @@ pub struct VarDeclaration {
     pub token_list: Vec<Token>,
 }
 
-#[ast_leaf((VarDeclaration | Statement))]
+#[ast_leaf("fun" function)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct FunctionDeclaration {
+    #[Type]
+    pub token_type: FunctionDeclarationType,
+    pub function: Function,
+}
+
+#[ast_leaf((VarDeclaration | Statement | FunctionDeclaration))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Declaration {
     #[Type]

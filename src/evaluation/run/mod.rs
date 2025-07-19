@@ -3,7 +3,7 @@ mod runnable;
 mod runnable_builders;
 
 pub use run_state::{RunScopes, RunState};
-use runnable::Runnable;
+pub use runnable::Runnable;
 pub use runnable::{Callable, NativeFunctionError};
 
 use crate::common::Visitable;
@@ -22,8 +22,8 @@ impl Program {
         let context = BuilderContext::new()?;
         let mut scopes = RunScopes::new();
         Self::initialize_context(&context, &mut scopes)?;
-        let state = RunState::new(context.functions_resolver.take(), scopes);
         let runner = program_ast.accept_with_context(&RunnableBuilder, &context)?;
+        let state = RunState::new(context.functions_resolver.take(), scopes);
         Ok(Self {
             program: runner,
             state,
@@ -42,7 +42,7 @@ impl Program {
                 .add_function(function)?;
             context.resolver.borrow_mut().declare(name)?;
             context.resolver.borrow_mut().define(name)?;
-            let callable_value = RuntimeValue::Callable(pointer);
+            let callable_value = RuntimeValue::Callable(pointer, name.to_string());
             scopes.set_variable(name.to_string(), callable_value, None);
         }
 

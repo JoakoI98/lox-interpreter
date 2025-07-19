@@ -12,7 +12,7 @@ pub enum RuntimeValue {
     Number(f64),
     String(String),
     Boolean(bool),
-    Callable(usize),
+    Callable(usize, String),
     Nil,
 }
 
@@ -23,7 +23,7 @@ impl Display for RuntimeValue {
             RuntimeValue::String(s) => write!(f, "{}", s),
             RuntimeValue::Boolean(b) => write!(f, "{}", b),
             RuntimeValue::Nil => write!(f, "nil"),
-            RuntimeValue::Callable(index) => write!(f, "function[{}]", index),
+            RuntimeValue::Callable(_, name) => write!(f, "<fn {}>", name),
         }
     }
 }

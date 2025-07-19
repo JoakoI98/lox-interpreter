@@ -5,6 +5,7 @@ use crate::evaluation::runtime_value::Result as RuntimeResult;
 
 type RunResult = RuntimeResult<()>;
 
+#[derive(Debug)]
 pub struct IsStatementRunnable {
     if_expr: Box<dyn Evaluable>,
     true_block: Box<dyn Runnable>,
@@ -26,7 +27,7 @@ impl IsStatementRunnable {
 }
 
 impl Runnable for IsStatementRunnable {
-    fn run(&self, state: &mut RunState) -> RunResult {
+    fn run(&self, state: &RunState) -> RunResult {
         let is_true = self.if_expr.eval(state)?.to_bool()?;
         if is_true {
             self.true_block.run(state)?;
@@ -37,6 +38,7 @@ impl Runnable for IsStatementRunnable {
     }
 }
 
+#[derive(Debug)]
 pub struct WhileStatementRunnable {
     eval_expr: Box<dyn Evaluable>,
     statement: Box<dyn Runnable>,
@@ -52,7 +54,7 @@ impl WhileStatementRunnable {
 }
 
 impl Runnable for WhileStatementRunnable {
-    fn run(&self, state: &mut RunState) -> RunResult {
+    fn run(&self, state: &RunState) -> RunResult {
         while self.eval_expr.eval(state)?.to_bool()? {
             self.statement.run(state)?;
         }
@@ -60,6 +62,7 @@ impl Runnable for WhileStatementRunnable {
     }
 }
 
+#[derive(Debug)]
 pub struct ForStatementRunnable {
     var_declaration: Option<Box<dyn Runnable>>,
     condition: Option<Box<dyn Evaluable>>,
@@ -82,7 +85,7 @@ impl ForStatementRunnable {
         }
     }
 
-    fn eval_condition(&self, state: &mut RunState) -> RuntimeResult<bool> {
+    fn eval_condition(&self, state: &RunState) -> RuntimeResult<bool> {
         Ok(self
             .condition
             .as_ref()
@@ -95,7 +98,7 @@ impl ForStatementRunnable {
 }
 
 impl Runnable for ForStatementRunnable {
-    fn run(&self, state: &mut RunState) -> RunResult {
+    fn run(&self, state: &RunState) -> RunResult {
         state.enter_scope()?;
         if let Some(var_declaration) = &self.var_declaration {
             var_declaration.run(state)?;

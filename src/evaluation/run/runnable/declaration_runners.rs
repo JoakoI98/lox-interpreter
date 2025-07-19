@@ -5,6 +5,7 @@ use crate::evaluation::runtime_value::Result as RuntimeResult;
 
 type RunResult = RuntimeResult<()>;
 
+#[derive(Debug)]
 pub struct VarDeclarationRunnable {
     identifier: String,
     expr: Option<Box<dyn Evaluable>>,
@@ -17,7 +18,7 @@ impl VarDeclarationRunnable {
 }
 
 impl Runnable for VarDeclarationRunnable {
-    fn run(&self, state: &mut RunState) -> RunResult {
+    fn run(&self, state: &RunState) -> RunResult {
         let mut value = None;
         if let Some(expr) = &self.expr {
             value = Some(expr.eval(state)?);
@@ -27,6 +28,7 @@ impl Runnable for VarDeclarationRunnable {
     }
 }
 
+#[derive(Debug)]
 pub struct BlockRunnable {
     declarations: Vec<Box<dyn Runnable>>,
 }
@@ -38,7 +40,7 @@ impl BlockRunnable {
 }
 
 impl Runnable for BlockRunnable {
-    fn run(&self, state: &mut RunState) -> RunResult {
+    fn run(&self, state: &RunState) -> RunResult {
         state.enter_scope()?;
         for declaration in &self.declarations {
             declaration.run(state)?;

@@ -11,7 +11,9 @@ pub use productions::expression::{
 
 pub use productions::assignments::{Assignment, Expression};
 
-pub use productions::declarations::{Declaration, DeclarationType, ProgramAst, VarDeclaration};
+pub use productions::declarations::{
+    Declaration, DeclarationType, FunctionDeclaration, ProgramAst, VarDeclaration,
+};
 
 pub use productions::statement::{
     Block, ExprStatement, ForStatement, ForStatementType, IfStatement, PrintStatement, Statement,

@@ -1,10 +1,14 @@
 use crate::common::{Visitable, VisitorWithContext};
-use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
-use crate::evaluation::run::runnable::{Runnable, VarDeclarationRunnable};
+use crate::evaluation::evaluator::{
+    AssignmentEvaluatorBuilder, EvaluableIdentifier, FunctionCallable,
+};
+use crate::evaluation::run::runnable::{
+    FunctionDeclarationRunnable, Runnable, VarDeclarationRunnable,
+};
 use crate::evaluation::runtime_value::Result;
 use crate::evaluation::BuilderContext;
 use crate::evaluation::RuntimeError;
-use crate::syntax_analysis::{Declaration, DeclarationType, VarDeclaration};
+use crate::syntax_analysis::{Declaration, DeclarationType, FunctionDeclaration, VarDeclaration};
 use crate::tokenizer::TokenValue;
 
 pub struct RunnableBuilder;
@@ -51,7 +55,54 @@ impl VisitorWithContext<&Declaration, Result<Box<dyn Runnable>>, BuilderContext>
         match &node.token_type {
             DeclarationType::VarDeclaration(var) => var.accept_with_context(&Self, context),
             DeclarationType::Statement(stmt) => stmt.accept_with_context(&Self, context),
+            DeclarationType::FunctionDeclaration(func) => func.accept_with_context(&Self, context),
             DeclarationType::None => Err(RuntimeError::ASTInvalidStructure),
         }
+    }
+}
+
+impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, BuilderContext>
+    for RunnableBuilder
+{
+    fn visit_with_context(
+        &self,
+        node: &FunctionDeclaration,
+        context: &BuilderContext,
+    ) -> Result<Box<dyn Runnable>> {
+        let function_ast = &node.function;
+        let parameters = function_ast
+            .parameters
+            .parameters
+            .iter()
+            .map(|ident| ident.token.lexeme.clone())
+            .collect::<Vec<String>>();
+
+        context.resolver.borrow_mut().enter_scope()?;
+        for parameter in &parameters {
+            context.resolver.borrow_mut().declare(&parameter)?;
+            context.resolver.borrow_mut().define(&parameter)?;
+        }
+
+        let block_runnable = function_ast.block.accept_with_context(&Self, context)?;
+        context.resolver.borrow_mut().exit_scope()?;
+
+        let callable = FunctionCallable::new(block_runnable, parameters);
+
+        let pointer = context
+            .functions_resolver
+            .borrow_mut()
+            .add_function(Box::new(callable))?;
+
+        let function_ident = function_ast
+            .token_list
+            .first()
+            .ok_or(RuntimeError::ASTInvalidStructure)?
+            .lexeme
+            .clone();
+
+        Ok(Box::new(FunctionDeclarationRunnable::new(
+            pointer,
+            function_ident,
+        )))
     }
 }

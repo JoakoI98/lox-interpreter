@@ -1,7 +1,3 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use thiserror::Error;
-
 use crate::evaluation::{evaluator::Evaluable, RunState, RuntimeError, RuntimeValue};
 
 pub trait Callable: Evaluable {
@@ -21,7 +17,10 @@ pub trait Callable: Evaluable {
             return Err(RuntimeError::ArityMismatch);
         }
 
+        state.enter_scope()?;
         self.define_arguments(arguments, state)?;
-        self.eval(state)
+        let result = self.eval(state)?;
+        state.exit_scope()?;
+        Ok(result)
     }
 }

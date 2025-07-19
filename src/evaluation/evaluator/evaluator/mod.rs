@@ -11,6 +11,6 @@ pub use core::{Evaluable, EvaluableIdentifier};
 // Re-export all evaluator implementations
 pub use assignment_evaluator::AssignmentEvaluator;
 pub use binary_evaluator::{BinaryEvaluator, BinaryOperation};
-pub use function_evaluator::{FunctionEvaluationError, FunctionEvaluator};
+pub use function_evaluator::{FunctionCallable, FunctionEvaluationError, FunctionEvaluator};
 pub use primary_evaluator::PrimaryEvaluator;
 pub use unary_evaluator::{UnaryEvaluator, UnaryOperation};

@@ -1,10 +1,12 @@
+use std::collections::LinkedList;
 use std::fmt::Display;
 
 use super::super::parsing::{ParseStream, Parser, Result};
 use ast_leaf::ast_leaf;
 
-use crate::syntax_analysis::parsing::primitives::{Comma, LeftParen, RightParen};
-use crate::syntax_analysis::{Expression, PrimaryExpression};
+use crate::syntax_analysis::parsing::primitives::{Comma, Identifier, LeftParen, RightParen};
+use crate::syntax_analysis::{Block, Expression, PrimaryExpression};
+use crate::tokenizer::Token;
 
 #[ast_leaf(first ((",") rest)*)]
 #[derive(Debug, PartialEq, Clone)]
@@ -52,4 +54,54 @@ impl Display for Call {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.primary)
     }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Parameters {
+    pub parameters: Vec<Identifier>,
+}
+
+impl Parser for Parameters {
+    fn parse(input: &mut ParseStream) -> Result<Self> {
+        let mut parameters = LinkedList::new();
+        if input.peek::<Identifier>() {
+            parameters.push_back(input.parse::<Identifier>()?);
+        }
+        while input.peek::<Comma>() {
+            input.parse::<Comma>()?;
+            parameters.push_back(input.parse::<Identifier>()?);
+        }
+        Ok(Parameters {
+            parameters: parameters.into_iter().collect(),
+        })
+    }
+
+    fn peek(_input: &ParseStream) -> bool {
+        true
+    }
+}
+
+impl Display for Parameters {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.parameters
+                .iter()
+                .map(|p| p.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
+    }
+}
+
+#[ast_leaf("IDENT" "(" parameters ")" block)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct Function {
+    #[Type]
+    pub ty: FunctionType,
+    pub block: Block,
+    pub parameters: Parameters,
+    #[TokenList]
+    pub token_list: Vec<Token>,
 }
