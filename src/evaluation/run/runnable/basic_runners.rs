@@ -1,9 +1,9 @@
 use super::super::run_state::RunState;
-use crate::evaluation::evaluator::{Evaluable, EvaluableIdentifier};
+use crate::evaluation::evaluator::Evaluable;
 use crate::evaluation::runtime_value::Result as RuntimeResult;
 use crate::evaluation::RuntimeValue;
 
-type RunResult = RuntimeResult<()>;
+pub type RunResult = RuntimeResult<Option<RuntimeValue>>;
 
 pub trait Runnable: std::fmt::Debug {
     fn run(&self, state: &RunState) -> RunResult;
@@ -23,7 +23,7 @@ impl PrintRunnable {
 impl Runnable for PrintRunnable {
     fn run(&self, run_state: &RunState) -> RunResult {
         println!("{}", self.value.eval(run_state)?);
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -41,7 +41,7 @@ impl ExpressionRunnable {
 impl Runnable for ExpressionRunnable {
     fn run(&self, run_state: &RunState) -> RunResult {
         self.value.eval(run_state)?;
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -59,9 +59,12 @@ impl ProgramRunnable {
 impl Runnable for ProgramRunnable {
     fn run(&self, state: &RunState) -> RunResult {
         for statement in &self.statements {
-            statement.run(state)?;
+            let ret = statement.run(state)?;
+            if ret.is_some() {
+                return Ok(ret);
+            }
         }
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -87,6 +90,6 @@ impl Runnable for FunctionDeclarationRunnable {
             RuntimeValue::Callable(self.function_pointer, self.identifier.clone()),
             Some(0),
         );
-        Ok(())
+        Ok(None)
     }
 }

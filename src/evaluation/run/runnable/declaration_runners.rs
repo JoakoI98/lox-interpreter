@@ -1,9 +1,7 @@
 use super::super::run_state::RunState;
 use super::basic_runners::Runnable;
 use crate::evaluation::evaluator::Evaluable;
-use crate::evaluation::runtime_value::Result as RuntimeResult;
-
-type RunResult = RuntimeResult<()>;
+use crate::evaluation::run::runnable::basic_runners::RunResult;
 
 #[derive(Debug)]
 pub struct VarDeclarationRunnable {
@@ -24,7 +22,7 @@ impl Runnable for VarDeclarationRunnable {
             value = Some(expr.eval(state)?);
         }
         state.declare_variable(self.identifier.clone(), value, Some(0));
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -46,6 +44,6 @@ impl Runnable for BlockRunnable {
             declaration.run(state)?;
         }
         state.exit_scope()?;
-        Ok(())
+        Ok(None)
     }
 }

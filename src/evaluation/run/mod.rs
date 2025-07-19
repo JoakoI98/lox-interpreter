@@ -50,6 +50,6 @@ impl Program {
     }
 
     pub fn run(&mut self) -> Result<(), RuntimeError> {
-        self.program.run(&mut self.state)
+        self.program.run(&mut self.state).map(|_| ())
     }
 }

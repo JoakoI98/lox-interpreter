@@ -1,9 +1,8 @@
 use super::super::run_state::RunState;
 use super::basic_runners::Runnable;
 use crate::evaluation::evaluator::Evaluable;
+use crate::evaluation::run::runnable::basic_runners::RunResult;
 use crate::evaluation::runtime_value::Result as RuntimeResult;
-
-type RunResult = RuntimeResult<()>;
 
 #[derive(Debug)]
 pub struct IsStatementRunnable {
@@ -28,13 +27,14 @@ impl IsStatementRunnable {
 
 impl Runnable for IsStatementRunnable {
     fn run(&self, state: &RunState) -> RunResult {
+        let mut ret = None;
         let is_true = self.if_expr.eval(state)?.to_bool()?;
         if is_true {
-            self.true_block.run(state)?;
+            ret = self.true_block.run(state)?;
         } else if let Some(else_block) = &self.else_block {
-            else_block.run(state)?;
+            ret = else_block.run(state)?;
         }
-        Ok(())
+        Ok(ret)
     }
 }
 
@@ -56,9 +56,12 @@ impl WhileStatementRunnable {
 impl Runnable for WhileStatementRunnable {
     fn run(&self, state: &RunState) -> RunResult {
         while self.eval_expr.eval(state)?.to_bool()? {
-            self.statement.run(state)?;
+            let ret = self.statement.run(state)?;
+            if ret.is_some() {
+                return Ok(ret);
+            }
         }
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -104,12 +107,15 @@ impl Runnable for ForStatementRunnable {
             var_declaration.run(state)?;
         }
         while self.eval_condition(state)? {
-            self.statement.run(state)?;
+            let ret = self.statement.run(state)?;
+            if ret.is_some() {
+                return Ok(ret);
+            }
             if let Some(increment) = &self.increment {
                 increment.eval(state)?;
             }
         }
         state.exit_scope()?;
-        Ok(())
+        Ok(None)
     }
 }
