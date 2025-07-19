@@ -4,8 +4,8 @@ mod productions;
 pub use parsing::{ParseError, ParseStream};
 
 pub use productions::expression::{
-    Comparison, ComparisonType, Equality, EqualityType, Factor, FactorType, PrimaryExpression,
-    PrimaryExpressionType, Term, TermType, UnaryExpression, UnaryExpressionSelf,
+    Comparison, ComparisonType, Equality, EqualityType, Factor, FactorType, LogicalAnd, LogicalOr,
+    PrimaryExpression, PrimaryExpressionType, Term, TermType, UnaryExpression, UnaryExpressionSelf,
     UnaryExpressionSelfType, UnaryExpressionType,
 };
 

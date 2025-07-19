@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use super::expression::Equality;
+use super::expression::LogicalOr;
 
 use super::super::parsing::{ParseStream, Parser, Result};
 
@@ -10,7 +10,7 @@ use crate::tokenizer::{Token, TokenEnum};
 #[derive(Debug, PartialEq, Clone)]
 pub enum Assignment {
     Assignment(Box<Assignment>, Identifier),
-    Evaluable(Equality),
+    Evaluable(LogicalOr),
 }
 impl crate::common::Visitable for Assignment {}
 impl Parser for Assignment {
@@ -25,7 +25,7 @@ impl Parser for Assignment {
             let assignment = input.parse::<Assignment>()?;
             Ok(Assignment::Assignment(Box::new(assignment), identifier))
         } else {
-            let evaluable = input.parse::<Equality>()?;
+            let evaluable = input.parse::<LogicalOr>()?;
             Ok(Assignment::Evaluable(evaluable))
         }
     }
@@ -35,7 +35,7 @@ impl Parser for Assignment {
             .peek1()
             .map(|token| token.token_type == TokenEnum::Identifier)
             .unwrap_or(false)
-            || input.peek::<Equality>()
+            || input.peek::<LogicalOr>()
     }
 }
 

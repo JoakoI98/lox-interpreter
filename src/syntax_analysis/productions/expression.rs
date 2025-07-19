@@ -3,15 +3,14 @@ use std::fmt::{Debug, Display};
 use ast_leaf::ast_leaf;
 
 use super::super::parsing::primitives::{
-    Bang, BangEqual, EqualEqual, False, Greater, GreaterEqual, Identifier, LeftParen, Less,
-    LessEqual, Minus, Nil, Number, Plus, RightParen, Slash, Star, String, True,
+    And, Bang, BangEqual, EqualEqual, False, Greater, GreaterEqual, Identifier, LeftParen, Less,
+    LessEqual, Minus, Nil, Number, Or, Plus, RightParen, Slash, Star, String, True,
 };
 use super::super::parsing::{
     ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError,
 };
 use super::assignments::Expression;
 
-use crate::common::Visitor;
 use crate::tokenizer::Token;
 
 #[ast_leaf(( "IDENT" |"NUMBER" | "STRING" | "true" | "false" | "nil" | 1: "(" Expression ")" ))]
@@ -176,6 +175,52 @@ impl Display for Equality {
             (token_str, comparison.to_string())
         });
         let result = operation_display(self.main_comparison.to_string().as_str(), operations);
+        write!(f, "{}", result)
+    }
+}
+
+#[ast_leaf(main_equality (("and") equalities)*)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct LogicalAnd {
+    #[Type]
+    pub token_type: LogicalAndType,
+    pub main_equality: Equality,
+    pub equalities: Vec<(LogicalAndType, Equality)>,
+}
+
+impl Display for LogicalAnd {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let operations = self.equalities.iter().map(|(t, equality)| {
+            let token_str: &'static str = match t {
+                LogicalAndType::None => "",
+                LogicalAndType::And => "and",
+            };
+            (token_str, equality.to_string())
+        });
+        let result = operation_display(self.main_equality.to_string().as_str(), operations);
+        write!(f, "{}", result)
+    }
+}
+
+#[ast_leaf(main_and (("or") ands)*)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct LogicalOr {
+    #[Type]
+    pub token_type: LogicalOrType,
+    pub main_and: LogicalAnd,
+    pub ands: Vec<(LogicalOrType, LogicalAnd)>,
+}
+
+impl Display for LogicalOr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let operations = self.ands.iter().map(|(t, and)| {
+            let token_str: &'static str = match t {
+                LogicalOrType::None => "",
+                LogicalOrType::Or => "or",
+            };
+            (token_str, and.to_string())
+        });
+        let result = operation_display(self.main_and.to_string().as_str(), operations);
         write!(f, "{}", result)
     }
 }

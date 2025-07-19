@@ -5,7 +5,8 @@ use crate::evaluation::evaluator::evaluator_builders::primary_evaluator_builder:
 use crate::evaluation::runtime_value::Result;
 use crate::evaluation::{BuilderContext, RuntimeError};
 use crate::syntax_analysis::{
-    Comparison, ComparisonType, Equality, EqualityType, Factor, FactorType, Term, TermType,
+    Comparison, ComparisonType, Equality, EqualityType, Factor, FactorType, LogicalAnd, LogicalOr,
+    Term, TermType,
 };
 
 pub struct BinaryEvaluatorBuilder;
@@ -116,6 +117,46 @@ impl VisitorWithContext<&Equality, Result<Box<dyn Evaluable>>, BuilderContext>
         for (op_type, equality) in &node.comparisons {
             let op = Self::from_ast_type_to_evaluator_type(BinaryASTOperation::Equality(op_type))?;
             let right = equality.accept_with_context(&BinaryEvaluatorBuilder, context)?;
+            main_evaluator = Box::new(BinaryEvaluator::new(op, main_evaluator, right));
+        }
+        Ok(main_evaluator)
+    }
+}
+
+impl VisitorWithContext<&LogicalAnd, Result<Box<dyn Evaluable>>, BuilderContext>
+    for BinaryEvaluatorBuilder
+{
+    fn visit_with_context(
+        &self,
+        node: &LogicalAnd,
+        context: &BuilderContext,
+    ) -> Result<Box<dyn Evaluable>> {
+        let mut main_evaluator = node
+            .main_equality
+            .accept_with_context(&BinaryEvaluatorBuilder, context)?;
+        for (_, equality) in &node.equalities {
+            let op = BinaryOperation::LogicalAnd;
+            let right = equality.accept_with_context(&BinaryEvaluatorBuilder, context)?;
+            main_evaluator = Box::new(BinaryEvaluator::new(op, main_evaluator, right));
+        }
+        Ok(main_evaluator)
+    }
+}
+
+impl VisitorWithContext<&LogicalOr, Result<Box<dyn Evaluable>>, BuilderContext>
+    for BinaryEvaluatorBuilder
+{
+    fn visit_with_context(
+        &self,
+        node: &LogicalOr,
+        context: &BuilderContext,
+    ) -> Result<Box<dyn Evaluable>> {
+        let mut main_evaluator = node
+            .main_and
+            .accept_with_context(&BinaryEvaluatorBuilder, context)?;
+        for (_, and) in &node.ands {
+            let op = BinaryOperation::LogicalOr;
+            let right = and.accept_with_context(&BinaryEvaluatorBuilder, context)?;
             main_evaluator = Box::new(BinaryEvaluator::new(op, main_evaluator, right));
         }
         Ok(main_evaluator)

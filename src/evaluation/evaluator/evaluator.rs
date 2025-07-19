@@ -114,6 +114,8 @@ pub enum BinaryOperation {
     GreaterThanOrEqual,
     LessThan,
     LessThanOrEqual,
+    LogicalAnd,
+    LogicalOr,
 }
 
 #[derive(Debug)]
@@ -139,6 +141,29 @@ impl BinaryEvaluator {
 
 impl Evaluable for BinaryEvaluator {
     fn eval(&self, run_state: &mut RunState) -> Result<RuntimeValue, RuntimeError> {
+        match self.operation {
+            // Short circuit evaluation
+            BinaryOperation::LogicalAnd => {
+                let left = self.left.eval(run_state)?;
+                if !left.to_bool()? {
+                    return Ok(RuntimeValue::Boolean(false));
+                }
+                let right = self.right.eval(run_state)?;
+                return Ok(RuntimeValue::Boolean(right.to_bool()?));
+            }
+            BinaryOperation::LogicalOr => {
+                let left = self.left.eval(run_state)?;
+                if left.to_bool()? {
+                    return Ok(left);
+                }
+                let right = self.right.eval(run_state)?;
+                if right.to_bool()? {
+                    return Ok(right);
+                }
+                return Ok(RuntimeValue::Boolean(false));
+            }
+            _ => {}
+        }
         let left = self.left.eval(run_state)?;
         let right = self.right.eval(run_state)?;
         match self.operation {
@@ -152,6 +177,12 @@ impl Evaluable for BinaryEvaluator {
             BinaryOperation::GreaterThanOrEqual => left.ge(&right),
             BinaryOperation::LessThan => left.lt(&right),
             BinaryOperation::LessThanOrEqual => left.le(&right),
+            BinaryOperation::LogicalAnd => {
+                unreachable!()
+            }
+            BinaryOperation::LogicalOr => {
+                unreachable!()
+            }
         }
     }
 }
