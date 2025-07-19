@@ -25,9 +25,22 @@ impl RunState {
         self.scopes[i].insert(identifier, value.unwrap_or(RuntimeValue::Nil));
     }
 
+    #[inline]
     pub fn set_variable(&mut self, identifier: String, value: RuntimeValue, depth: Option<usize>) {
         let i = self.scopes.len() - depth.unwrap_or(0) - 1;
         self.scopes[i].insert(identifier, value);
+    }
+
+    #[inline]
+    pub fn enter_scope(&mut self) -> Result<(), RuntimeError> {
+        self.scopes.push(HashMap::new());
+        Ok(())
+    }
+
+    #[inline]
+    pub fn exit_scope(&mut self) -> Result<(), RuntimeError> {
+        self.scopes.pop();
+        Ok(())
     }
 
     pub fn evaluate_variable(

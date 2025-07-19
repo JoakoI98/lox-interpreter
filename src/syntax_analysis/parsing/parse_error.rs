@@ -40,10 +40,15 @@ pub struct UnexpectedTokenError {
 impl Display for UnexpectedTokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let expected_string = self.expected.to_string();
+        let at_string = if self.token.token_type == TokenEnum::Eof {
+            "end".to_string()
+        } else {
+            format!("'{}'", self.token.lexeme)
+        };
         write!(
             f,
-            "[line {}] Error at '{}': Expect {}.",
-            self.token.line, self.token.lexeme, expected_string
+            "[line {}] Error at {}: Expect '{}'.",
+            self.token.line, at_string, expected_string
         )
     }
 }

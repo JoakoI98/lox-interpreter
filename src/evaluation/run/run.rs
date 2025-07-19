@@ -82,3 +82,24 @@ impl Runnable for VarDeclarationRunnable {
         Ok(())
     }
 }
+
+pub struct BlockRunnable {
+    declarations: Vec<Box<dyn Runnable>>,
+}
+
+impl BlockRunnable {
+    pub(super) fn new(declarations: Vec<Box<dyn Runnable>>) -> Self {
+        Self { declarations }
+    }
+}
+
+impl Runnable for BlockRunnable {
+    fn run(&self, state: &mut RunState) -> RunResult {
+        state.enter_scope()?;
+        for declaration in &self.declarations {
+            declaration.run(state)?;
+        }
+        state.exit_scope()?;
+        Ok(())
+    }
+}
