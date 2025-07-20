@@ -43,7 +43,7 @@ impl Program {
             context.resolver.borrow_mut().declare(name)?;
             context.resolver.borrow_mut().define(name)?;
             let callable_value = RuntimeValue::Callable(pointer, name.to_string());
-            scopes.set_variable(name.to_string(), callable_value, None);
+            scopes.declare_variable(name.to_string(), Some(callable_value), None);
         }
 
         Ok(())

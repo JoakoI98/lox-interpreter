@@ -60,8 +60,8 @@ impl FunctionCallable {
 
 impl Evaluable for FunctionCallable {
     fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError> {
-        self.function_block.run(state)?;
-        Ok(RuntimeValue::Nil)
+        let ret = self.function_block.run(state)?;
+        Ok(ret.unwrap_or(RuntimeValue::Nil))
     }
 }
 
@@ -76,7 +76,7 @@ impl Callable for FunctionCallable {
         state: &RunState,
     ) -> Result<(), RuntimeError> {
         for (i, argument) in arguments.iter().enumerate() {
-            state.set_variable(self.parameters[i].clone(), argument.clone(), Some(0));
+            state.declare_variable(self.parameters[i].clone(), Some(argument.clone()), Some(0));
         }
         Ok(())
     }

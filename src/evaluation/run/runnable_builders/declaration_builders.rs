@@ -77,7 +77,16 @@ impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, Builder
             .map(|ident| ident.token.lexeme.clone())
             .collect::<Vec<String>>();
 
+        let function_ident = function_ast
+            .token_list
+            .first()
+            .ok_or(RuntimeError::ASTInvalidStructure)?
+            .lexeme
+            .clone();
+
         context.resolver.borrow_mut().enter_scope()?;
+        context.resolver.borrow_mut().declare(&function_ident)?;
+        context.resolver.borrow_mut().define(&function_ident)?;
         for parameter in &parameters {
             context.resolver.borrow_mut().declare(&parameter)?;
             context.resolver.borrow_mut().define(&parameter)?;
@@ -92,13 +101,6 @@ impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, Builder
             .functions_resolver
             .borrow_mut()
             .add_function(Box::new(callable))?;
-
-        let function_ident = function_ast
-            .token_list
-            .first()
-            .ok_or(RuntimeError::ASTInvalidStructure)?
-            .lexeme
-            .clone();
 
         Ok(Box::new(FunctionDeclarationRunnable::new(
             pointer,

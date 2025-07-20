@@ -2,15 +2,15 @@ use super::declaration_builders::RunnableBuilder;
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
 use crate::evaluation::run::runnable::{
-    ExpressionRunnable, ForStatementRunnable, IsStatementRunnable, PrintRunnable, Runnable,
-    WhileStatementRunnable,
+    ExpressionRunnable, ForStatementRunnable, IsStatementRunnable, PrintRunnable, ReturnRunnable,
+    Runnable, WhileStatementRunnable,
 };
 use crate::evaluation::runtime_value::Result;
 use crate::evaluation::BuilderContext;
 use crate::evaluation::RuntimeError;
 use crate::syntax_analysis::{
-    ExprStatement, ForStatement, ForStatementType, IfStatement, PrintStatement, Statement,
-    StatementType, WhileStatement,
+    ExprStatement, ForStatement, ForStatementType, IfStatement, PrintStatement, ReturnStatement,
+    Statement, StatementType, WhileStatement,
 };
 
 impl VisitorWithContext<&PrintStatement, Result<Box<dyn Runnable>>, BuilderContext>
@@ -58,6 +58,9 @@ impl VisitorWithContext<&Statement, Result<Box<dyn Runnable>>, BuilderContext> f
                 while_stmt.accept_with_context(&Self, context)
             }
             StatementType::ForStatement(for_stmt) => for_stmt.accept_with_context(&Self, context),
+            StatementType::ReturnStatement(return_stmt) => {
+                return_stmt.accept_with_context(&Self, context)
+            }
             StatementType::None => Err(RuntimeError::ASTInvalidStructure),
         }
     }
@@ -140,5 +143,22 @@ impl VisitorWithContext<&ForStatement, Result<Box<dyn Runnable>>, BuilderContext
             increment,
             statement,
         )))
+    }
+}
+
+impl VisitorWithContext<&ReturnStatement, Result<Box<dyn Runnable>>, BuilderContext>
+    for RunnableBuilder
+{
+    fn visit_with_context(
+        &self,
+        node: &ReturnStatement,
+        context: &BuilderContext,
+    ) -> Result<Box<dyn Runnable>> {
+        let expr = node
+            .expr
+            .as_ref()
+            .map(|e| e.accept_with_context(&AssignmentEvaluatorBuilder, context))
+            .transpose()?;
+        Ok(Box::new(ReturnRunnable::new(expr)))
     }
 }

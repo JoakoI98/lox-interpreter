@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use ast_leaf::ast_leaf;
 
 use super::super::parsing::primitives::{
-    Else, For, If, LeftBrace, LeftParen, Print, RightBrace, RightParen, Semicolon, While,
+    Else, For, If, LeftBrace, LeftParen, Print, Return, RightBrace, RightParen, Semicolon, While,
 };
 use super::super::parsing::{ParseStream, Parser, Result};
 
@@ -26,7 +26,7 @@ pub struct ExprStatement {
     pub expr: Expression,
 }
 
-#[ast_leaf((ExprStatement | PrintStatement | Block | IfStatement | WhileStatement | ForStatement))]
+#[ast_leaf((ExprStatement | PrintStatement | Block | IfStatement | WhileStatement | ForStatement | ReturnStatement))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Statement {
     #[Type]
@@ -89,4 +89,12 @@ pub struct ForStatement {
     pub condition: MaybeExpression,
     pub increment: MaybeExpression,
     pub statement: StatementReference,
+}
+
+#[ast_leaf("return" (expr)?";")]
+#[derive(Debug, PartialEq, Clone)]
+pub struct ReturnStatement {
+    #[Type]
+    pub token_type: ReturnStatementType,
+    pub expr: Option<Expression>,
 }

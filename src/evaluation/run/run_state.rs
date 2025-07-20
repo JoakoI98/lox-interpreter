@@ -30,8 +30,12 @@ impl RunScopes {
 
     #[inline]
     pub fn set_variable(&mut self, identifier: String, value: RuntimeValue, depth: Option<usize>) {
-        let i = self.scopes.len() - depth.unwrap_or(0) - 1;
-        self.scopes[i].insert(identifier, value);
+        for scope in self.scopes.iter_mut().rev().skip(depth.unwrap_or(0)) {
+            if scope.contains_key(&identifier) {
+                scope.insert(identifier, value);
+                return;
+            }
+        }
     }
 
     #[inline]
@@ -50,15 +54,22 @@ impl RunScopes {
         &self,
         identifier: &EvaluableIdentifier,
     ) -> Result<RuntimeValue, RuntimeError> {
-        let i = self.scopes.len() - identifier.depth().unwrap_or(0) - 1;
-        let value =
-            self.scopes[i]
-                .get(identifier.identifier())
-                .ok_or(RuntimeError::UndefinedVariable(
-                    identifier.identifier().to_string(),
-                    identifier.line(),
-                ))?;
-        Ok(value.clone())
+        for scope in self
+            .scopes
+            .iter()
+            .rev()
+            .skip(identifier.depth().unwrap_or(0))
+        {
+            if scope.contains_key(identifier.identifier()) {
+                let value = scope.get(identifier.identifier()).unwrap();
+
+                return Ok(value.clone());
+            }
+        }
+        Err(RuntimeError::UndefinedVariable(
+            identifier.identifier().to_string(),
+            identifier.line(),
+        ))
     }
 }
 

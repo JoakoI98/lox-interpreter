@@ -8,7 +8,7 @@ pub use basic_runners::Runnable;
 
 // Re-export all runner implementations
 pub use basic_runners::{
-    ExpressionRunnable, FunctionDeclarationRunnable, PrintRunnable, ProgramRunnable,
+    ExpressionRunnable, FunctionDeclarationRunnable, PrintRunnable, ProgramRunnable, ReturnRunnable,
 };
 pub use control_flow_runners::{ForStatementRunnable, IsStatementRunnable, WhileStatementRunnable};
 pub use declaration_runners::{BlockRunnable, VarDeclarationRunnable};

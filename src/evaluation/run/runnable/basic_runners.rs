@@ -85,11 +85,32 @@ impl FunctionDeclarationRunnable {
 
 impl Runnable for FunctionDeclarationRunnable {
     fn run(&self, state: &RunState) -> RunResult {
-        state.set_variable(
+        state.declare_variable(
             self.identifier.clone(),
-            RuntimeValue::Callable(self.function_pointer, self.identifier.clone()),
+            Some(RuntimeValue::Callable(
+                self.function_pointer,
+                self.identifier.clone(),
+            )),
             Some(0),
         );
         Ok(None)
+    }
+}
+
+#[derive(Debug)]
+pub struct ReturnRunnable {
+    expr: Option<Box<dyn Evaluable>>,
+}
+
+impl ReturnRunnable {
+    pub fn new(expr: Option<Box<dyn Evaluable>>) -> Self {
+        Self { expr }
+    }
+}
+
+impl Runnable for ReturnRunnable {
+    fn run(&self, state: &RunState) -> RunResult {
+        let ret = self.expr.as_ref().map(|e| e.eval(state)).transpose()?;
+        return Ok(Some(ret.unwrap_or(RuntimeValue::Nil)));
     }
 }

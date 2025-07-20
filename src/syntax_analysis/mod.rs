@@ -16,8 +16,8 @@ pub use productions::declarations::{
 };
 
 pub use productions::statement::{
-    Block, ExprStatement, ForStatement, ForStatementType, IfStatement, PrintStatement, Statement,
-    StatementType, WhileStatement,
+    Block, ExprStatement, ForStatement, ForStatementType, IfStatement, PrintStatement,
+    ReturnStatement, Statement, StatementType, WhileStatement,
 };
 
 pub use productions::functions::{ArgumentsList, Call};

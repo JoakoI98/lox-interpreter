@@ -40,10 +40,14 @@ impl BlockRunnable {
 impl Runnable for BlockRunnable {
     fn run(&self, state: &RunState) -> RunResult {
         state.enter_scope()?;
+        let mut ret = None;
         for declaration in &self.declarations {
-            declaration.run(state)?;
+            ret = declaration.run(state)?;
+            if ret.is_some() {
+                break;
+            }
         }
         state.exit_scope()?;
-        Ok(None)
+        Ok(ret)
     }
 }
