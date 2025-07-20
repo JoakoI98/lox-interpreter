@@ -1,6 +1,7 @@
 use super::declaration_builders::RunnableBuilder;
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
+use crate::evaluation::resolver::ResolverError;
 use crate::evaluation::run::runnable::{
     ExpressionRunnable, ForStatementRunnable, IsStatementRunnable, PrintRunnable, ReturnRunnable,
     Runnable, WhileStatementRunnable,
@@ -154,6 +155,13 @@ impl VisitorWithContext<&ReturnStatement, Result<Box<dyn Runnable>>, BuilderCont
         node: &ReturnStatement,
         context: &BuilderContext,
     ) -> Result<Box<dyn Runnable>> {
+        let function_depth = context.resolver.borrow().function_depth();
+        if function_depth == 0 {
+            return Err(ResolverError::ReturnOutsideFunction(
+                node.token_list.first().unwrap().line,
+            )
+            .into());
+        }
         let expr = node
             .expr
             .as_ref()

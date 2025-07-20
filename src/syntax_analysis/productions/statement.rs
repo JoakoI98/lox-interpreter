@@ -9,6 +9,7 @@ use super::super::parsing::{ParseStream, Parser, Result};
 
 use super::assignments::Expression;
 use crate::syntax_analysis::{Declaration, VarDeclaration};
+use crate::tokenizer::Token;
 
 #[ast_leaf("print" expr ";")]
 #[derive(Debug, PartialEq, Clone)]
@@ -97,4 +98,6 @@ pub struct ReturnStatement {
     #[Type]
     pub token_type: ReturnStatementType,
     pub expr: Option<Expression>,
+    #[TokenList]
+    pub token_list: Vec<Token>,
 }

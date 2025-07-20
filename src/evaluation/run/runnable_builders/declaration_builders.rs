@@ -31,7 +31,10 @@ impl VisitorWithContext<&VarDeclaration, Result<Box<dyn Runnable>>, BuilderConte
         };
 
         let mut evaluable = None;
-        context.resolver.borrow_mut().declare(&ident_value)?;
+        context
+            .resolver
+            .borrow_mut()
+            .declare(&ident_value, ident_token.line)?;
         if let Some(expr) = &node.expr {
             evaluable = Some(expr.accept_with_context(&AssignmentEvaluatorBuilder, context)?);
         }
@@ -70,32 +73,43 @@ impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, Builder
         context: &BuilderContext,
     ) -> Result<Box<dyn Runnable>> {
         let function_ast = &node.function;
-        let parameters = function_ast
-            .parameters
-            .parameters
-            .iter()
-            .map(|ident| ident.token.lexeme.clone())
-            .collect::<Vec<String>>();
+        let parameters = &function_ast.parameters.parameters;
 
         let function_ident = function_ast
             .token_list
             .first()
-            .ok_or(RuntimeError::ASTInvalidStructure)?
-            .lexeme
-            .clone();
+            .ok_or(RuntimeError::ASTInvalidStructure)?;
+        let function_ident_string = function_ident.lexeme.clone();
 
-        context.resolver.borrow_mut().declare(&function_ident)?;
-        context.resolver.borrow_mut().define(&function_ident)?;
+        context
+            .resolver
+            .borrow_mut()
+            .declare(&function_ident_string, function_ident.line)?;
+        context
+            .resolver
+            .borrow_mut()
+            .define(&function_ident_string)?;
         context.resolver.borrow_mut().enter_scope()?;
-        for parameter in &parameters {
-            context.resolver.borrow_mut().declare(&parameter)?;
-            context.resolver.borrow_mut().define(&parameter)?;
+        context.resolver.borrow_mut().enter_function();
+        for parameter in parameters {
+            context
+                .resolver
+                .borrow_mut()
+                .declare(&parameter.token.lexeme, parameter.token.line)?;
+            context
+                .resolver
+                .borrow_mut()
+                .define(&&parameter.token.lexeme)?;
         }
 
         let block_runnable = function_ast.block.accept_with_context(&Self, context)?;
         context.resolver.borrow_mut().exit_scope()?;
+        context.resolver.borrow_mut().exit_function();
 
-        let callable = FunctionCallable::new(block_runnable, parameters);
+        let callable = FunctionCallable::new(
+            block_runnable,
+            parameters.iter().map(|p| p.token.lexeme.clone()).collect(),
+        );
 
         let pointer = context
             .functions_resolver
@@ -104,7 +118,7 @@ impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, Builder
 
         Ok(Box::new(FunctionDeclarationRunnable::new(
             pointer,
-            function_ident,
+            function_ident_string,
         )))
     }
 }
