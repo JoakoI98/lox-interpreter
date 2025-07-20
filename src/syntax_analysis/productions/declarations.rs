@@ -2,7 +2,9 @@ use std::fmt::Debug;
 
 use ast_leaf::ast_leaf;
 
-use super::super::parsing::primitives::{Equal, Fun, Identifier, Semicolon, Var};
+use super::super::parsing::primitives::{
+    Class, Equal, Fun, Identifier, LeftBrace, RightBrace, Semicolon, Var,
+};
 use super::super::parsing::{ParseStream, Parser, Result};
 use super::assignments::Expression;
 
@@ -28,7 +30,17 @@ pub struct FunctionDeclaration {
     pub function: Function,
 }
 
-#[ast_leaf((VarDeclaration | Statement | FunctionDeclaration))]
+#[ast_leaf("class" "IDENT" "{" (functions)* "}")]
+#[derive(Debug, PartialEq, Clone)]
+pub struct ClassDeclaration {
+    #[Type]
+    pub token_type: ClassDeclarationType,
+    pub functions: Vec<(ClassDeclarationType, Function)>,
+    #[TokenList]
+    pub token_list: Vec<Token>,
+}
+
+#[ast_leaf((VarDeclaration | Statement | FunctionDeclaration | ClassDeclaration))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Declaration {
     #[Type]

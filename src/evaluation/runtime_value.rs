@@ -1,35 +1,60 @@
 use std::{
+    collections::TryReserveError,
     fmt::Display,
     ops::{Add, Div, Mul, Neg, Not, Sub},
 };
 
 use thiserror::Error;
 
-use crate::evaluation::run::{NativeFunctionError, RunScopeRef};
+use crate::evaluation::{
+    evaluator::ClassAccessorError,
+    run::{NativeFunctionError, RunScopeRef},
+};
 
 #[derive(Clone)]
 pub struct Callable {
     pointer: usize,
     name: String,
     scope: Option<RunScopeRef>,
+    is_class_constructor: bool,
 }
 
 impl std::fmt::Debug for Callable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let is = if self.is_class_constructor {
+            "class"
+        } else {
+            "function"
+        };
         write!(
             f,
-            "Callable {{ pointer: {}, name: {} }}",
-            self.pointer, self.name
+            "{} {{ pointer: {}, name: {} }}",
+            is, self.pointer, self.name
         )
     }
 }
 
+impl Display for Callable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_class_constructor {
+            return write!(f, "{}", self.name);
+        }
+        write!(f, "<fn {}>", self.name)
+    }
+}
+
 impl Callable {
-    pub fn new(pointer: usize, name: String, scope: Option<RunScopeRef>) -> Self {
+    pub fn new(
+        pointer: usize,
+        name: String,
+        scope: Option<RunScopeRef>,
+        is_class_constructor: bool,
+    ) -> Self {
         Self {
             pointer,
             name,
             scope,
+            is_class_constructor,
         }
     }
 
@@ -54,6 +79,7 @@ pub enum RuntimeValue {
     String(String),
     Boolean(bool),
     Callable(Callable),
+    ClassInstance(usize, String),
     Nil,
 }
 
@@ -64,7 +90,8 @@ impl Display for RuntimeValue {
             RuntimeValue::String(s) => write!(f, "{}", s),
             RuntimeValue::Boolean(b) => write!(f, "{}", b),
             RuntimeValue::Nil => write!(f, "nil"),
-            RuntimeValue::Callable(c) => write!(f, "<fn {}>", c.name),
+            RuntimeValue::Callable(c) => write!(f, "{}", c),
+            RuntimeValue::ClassInstance(_, s) => write!(f, "{} instance", s),
         }
     }
 }
@@ -93,6 +120,14 @@ pub enum RuntimeError {
     FunctionNotFound,
     #[error("Out of scope")]
     OutOfScope,
+    #[error("Not enough space to allocate new scope")]
+    NotEnoughSpace(#[from] TryReserveError),
+    #[error("Not enough space to allocate new instance")]
+    NotEnoughSpaceToAllocateNewInstance,
+    #[error("Instance not found")]
+    InstanceNotFound(usize),
+    #[error("{0}")]
+    ClassAccessorError(#[from] ClassAccessorError),
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
@@ -170,8 +205,13 @@ impl Sub for RuntimeValue {
 }
 
 impl RuntimeValue {
-    pub fn callable(pointer: usize, name: String, scope: Option<RunScopeRef>) -> Self {
-        RuntimeValue::Callable(Callable::new(pointer, name, scope))
+    pub fn callable(
+        pointer: usize,
+        name: String,
+        scope: Option<RunScopeRef>,
+        is_class_constructor: bool,
+    ) -> Self {
+        RuntimeValue::Callable(Callable::new(pointer, name, scope, is_class_constructor))
     }
 
     pub fn to_bool(&self) -> Result<bool> {

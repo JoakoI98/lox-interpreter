@@ -12,7 +12,7 @@ pub use productions::expression::{
 pub use productions::assignments::{Assignment, Expression};
 
 pub use productions::declarations::{
-    Declaration, DeclarationType, FunctionDeclaration, ProgramAst, VarDeclaration,
+    ClassDeclaration, Declaration, DeclarationType, FunctionDeclaration, ProgramAst, VarDeclaration,
 };
 
 pub use productions::statement::{
@@ -20,4 +20,6 @@ pub use productions::statement::{
     ReturnStatement, Statement, StatementType, WhileStatement,
 };
 
-pub use productions::functions::{ArgumentsList, Call};
+pub use productions::functions::{
+    AccessorOrArguments, AccessorOrArgumentsType, ArgumentsList, Call,
+};

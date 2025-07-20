@@ -92,6 +92,7 @@ impl Runnable for FunctionDeclarationRunnable {
                 self.function_pointer,
                 self.identifier.clone(),
                 Some(scope),
+                false,
             )),
             Some(0),
         );

@@ -27,6 +27,7 @@ pub enum ResolverError {
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
     function_depth: usize,
+    class_depth: usize,
 }
 
 const INITIAL_SCOPE_CAPACITY: usize = 50;
@@ -40,6 +41,7 @@ impl Resolver {
         Ok(Self {
             scopes,
             function_depth: 0,
+            class_depth: 0,
         })
     }
 
@@ -133,5 +135,13 @@ impl Resolver {
 
     pub fn function_depth(&self) -> usize {
         self.function_depth
+    }
+
+    pub fn enter_class(&mut self) {
+        self.class_depth += 1;
+    }
+
+    pub fn exit_class(&mut self) {
+        self.class_depth -= 1;
     }
 }

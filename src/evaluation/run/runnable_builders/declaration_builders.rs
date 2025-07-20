@@ -1,12 +1,15 @@
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::{AssignmentEvaluatorBuilder, FunctionCallable};
+use crate::evaluation::run::runnable::{ClassDeclarationRunnable, ClassInitializationCallable};
 use crate::evaluation::run::runnable::{
     FunctionDeclarationRunnable, Runnable, VarDeclarationRunnable,
 };
 use crate::evaluation::runtime_value::Result;
 use crate::evaluation::BuilderContext;
 use crate::evaluation::RuntimeError;
-use crate::syntax_analysis::{Declaration, DeclarationType, FunctionDeclaration, VarDeclaration};
+use crate::syntax_analysis::{
+    ClassDeclaration, Declaration, DeclarationType, FunctionDeclaration, VarDeclaration,
+};
 use crate::tokenizer::TokenValue;
 
 pub struct RunnableBuilder;
@@ -57,6 +60,7 @@ impl VisitorWithContext<&Declaration, Result<Box<dyn Runnable>>, BuilderContext>
             DeclarationType::VarDeclaration(var) => var.accept_with_context(&Self, context),
             DeclarationType::Statement(stmt) => stmt.accept_with_context(&Self, context),
             DeclarationType::FunctionDeclaration(func) => func.accept_with_context(&Self, context),
+            DeclarationType::ClassDeclaration(class) => class.accept_with_context(&Self, context),
             DeclarationType::None => Err(RuntimeError::ASTInvalidStructure),
         }
     }
@@ -117,6 +121,42 @@ impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, Builder
         Ok(Box::new(FunctionDeclarationRunnable::new(
             pointer,
             function_ident_string,
+        )))
+    }
+}
+
+impl VisitorWithContext<&ClassDeclaration, Result<Box<dyn Runnable>>, BuilderContext>
+    for RunnableBuilder
+{
+    fn visit_with_context(
+        &self,
+        node: &ClassDeclaration,
+        context: &BuilderContext,
+    ) -> Result<Box<dyn Runnable>> {
+        let class_ident = node
+            .token_list
+            .get(1)
+            .ok_or(RuntimeError::ASTInvalidStructure)?;
+        let class_ident_string = class_ident.lexeme.clone();
+
+        context
+            .resolver
+            .borrow_mut()
+            .declare(&class_ident_string, class_ident.line)?;
+        context.resolver.borrow_mut().define(&class_ident_string)?;
+        context.resolver.borrow_mut().enter_class();
+        context.resolver.borrow_mut().exit_class();
+
+        let callable = ClassInitializationCallable::new(class_ident_string.clone());
+
+        let pointer = context
+            .functions_resolver
+            .borrow_mut()
+            .add_function(Box::new(callable))?;
+
+        Ok(Box::new(ClassDeclarationRunnable::new(
+            pointer,
+            class_ident_string,
         )))
     }
 }

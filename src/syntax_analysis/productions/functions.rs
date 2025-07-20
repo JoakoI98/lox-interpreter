@@ -4,7 +4,7 @@ use std::fmt::Display;
 use super::super::parsing::{ParseStream, Parser, Result};
 use ast_leaf::ast_leaf;
 
-use crate::syntax_analysis::parsing::primitives::{Comma, Identifier, LeftParen, RightParen};
+use crate::syntax_analysis::parsing::primitives::{Comma, Dot, Identifier, LeftParen, RightParen};
 use crate::syntax_analysis::{Block, Expression, PrimaryExpression};
 use crate::tokenizer::Token;
 
@@ -41,13 +41,37 @@ pub struct ArgumentsList {
     pub maybe_arguments: MaybeArguments,
 }
 
-#[ast_leaf(primary (arguments_list)*)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct Accessor {
+    pub identifier: Identifier,
+}
+
+impl Parser for Accessor {
+    fn parse(input: &mut ParseStream) -> Result<Self> {
+        input.parse::<Dot>()?;
+        let identifier = input.parse::<Identifier>()?;
+        Ok(Accessor { identifier })
+    }
+
+    fn peek(input: &ParseStream) -> bool {
+        input.peek::<Dot>()
+    }
+}
+
+#[ast_leaf((Accessor | ArgumentsList))]
+#[derive(Debug, PartialEq, Clone)]
+pub struct AccessorOrArguments {
+    #[Type]
+    pub ty: AccessorOrArgumentsType,
+}
+
+#[ast_leaf(primary (accessor_or_arguments)*)]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Call {
     #[Type]
     pub token_type: CallType,
     pub primary: PrimaryExpression,
-    pub arguments_list: Vec<(CallType, ArgumentsList)>,
+    pub accessor_or_arguments: Vec<(CallType, AccessorOrArguments)>,
 }
 
 impl Display for Call {

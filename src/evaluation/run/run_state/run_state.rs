@@ -3,13 +3,14 @@ use std::{cell::RefCell, rc::Rc};
 use crate::evaluation::{
     evaluator::EvaluableIdentifier,
     functions_resolver::FunctionsResolver,
-    run::{RunScopeRef, RunScopes},
+    run::{run_state::InstanceManager, RunScopeRef, RunScopes},
     RuntimeError, RuntimeValue,
 };
 
 pub struct RunState {
     scopes: RefCell<RunScopeRef>,
     functions_resolver: RefCell<FunctionsResolver>,
+    instance_manager: RefCell<InstanceManager>,
 }
 
 impl RunState {
@@ -17,6 +18,7 @@ impl RunState {
         Self {
             scopes: RefCell::new(Rc::new(RefCell::new(scopes))),
             functions_resolver: RefCell::new(functions_resolver),
+            instance_manager: RefCell::new(InstanceManager::new().unwrap()),
         }
     }
 
@@ -24,6 +26,7 @@ impl RunState {
         Self {
             scopes: RefCell::new(Rc::new(RefCell::new(RunScopes::new(None)))),
             functions_resolver: RefCell::new(FunctionsResolver::new().unwrap()),
+            instance_manager: RefCell::new(InstanceManager::new().unwrap()),
         }
     }
 
@@ -108,5 +111,30 @@ impl RunState {
 
     pub fn get_current_scope(&self) -> RunScopeRef {
         self.scopes.borrow().clone()
+    }
+
+    pub fn initialize_instance(&self) -> Result<usize, RuntimeError> {
+        self.instance_manager.borrow_mut().initialize_instance()
+    }
+
+    pub fn get_instance_value(
+        &self,
+        index: usize,
+        key: &str,
+    ) -> Result<Option<RuntimeValue>, RuntimeError> {
+        self.instance_manager
+            .borrow()
+            .get_instance_value(index, key)
+    }
+
+    pub fn set_instance_value(
+        &self,
+        index: usize,
+        key: &str,
+        value: RuntimeValue,
+    ) -> Result<(), RuntimeError> {
+        self.instance_manager
+            .borrow_mut()
+            .set_instance_value(index, key, value)
     }
 }
