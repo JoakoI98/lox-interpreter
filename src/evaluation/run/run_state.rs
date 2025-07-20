@@ -1,19 +1,23 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::evaluation::{
-    evaluator::EvaluableIdentifier, functions_resolver::FunctionsResolver, run::Callable,
-    RuntimeError, RuntimeValue,
+    evaluator::EvaluableIdentifier, functions_resolver::FunctionsResolver, RuntimeError,
+    RuntimeValue,
 };
 
 #[derive(Debug)]
 pub struct RunScopes {
-    scopes: Vec<HashMap<String, RuntimeValue>>,
+    values: HashMap<String, RuntimeValue>,
+    enclosing: Option<RunScopeRef>,
 }
 
+type RunScopeRef = Rc<RefCell<RunScopes>>;
+
 impl RunScopes {
-    pub fn new() -> Self {
+    pub fn new(enclosing: Option<RunScopeRef>) -> Self {
         Self {
-            scopes: vec![HashMap::new()],
+            values: HashMap::new(),
+            enclosing,
         }
     }
 
@@ -24,71 +28,91 @@ impl RunScopes {
         value: Option<RuntimeValue>,
         depth: Option<usize>,
     ) {
-        let i = self.scopes.len() - depth.unwrap_or(0) - 1;
-        self.scopes[i].insert(identifier, value.unwrap_or(RuntimeValue::Nil));
-    }
-
-    #[inline]
-    pub fn set_variable(&mut self, identifier: String, value: RuntimeValue, depth: Option<usize>) {
-        for scope in self.scopes.iter_mut().rev().skip(depth.unwrap_or(0)) {
-            if scope.contains_key(&identifier) {
-                scope.insert(identifier, value);
-                return;
-            }
+        let depth = depth.unwrap_or(0);
+        if depth == 0 {
+            self.values
+                .insert(identifier, value.unwrap_or(RuntimeValue::Nil));
+        } else {
+            self.enclosing
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .declare_variable(identifier, value, Some(depth - 1));
         }
     }
 
     #[inline]
-    pub fn enter_scope(&mut self) -> Result<(), RuntimeError> {
-        self.scopes.push(HashMap::new());
-        Ok(())
+    pub fn set_variable(&mut self, identifier: String, value: RuntimeValue, depth: Option<usize>) {
+        let depth = depth.unwrap_or(0);
+        if depth > 0 {
+            return self.enclosing.as_ref().unwrap().borrow_mut().set_variable(
+                identifier,
+                value,
+                Some(depth - 1),
+            );
+        }
+        if self.values.contains_key(&identifier) {
+            self.values.insert(identifier, value);
+        } else {
+            self.enclosing
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .set_variable(identifier, value, None);
+        }
     }
 
-    #[inline]
-    pub fn exit_scope(&mut self) -> Result<(), RuntimeError> {
-        self.scopes.pop();
-        Ok(())
+    pub fn get_enclosing(&self) -> Option<RunScopeRef> {
+        self.enclosing.as_ref().map(|scope| scope.clone())
     }
 
     pub fn evaluate_variable(
         &self,
         identifier: &EvaluableIdentifier,
+        overwrite_depth: Option<usize>,
     ) -> Result<RuntimeValue, RuntimeError> {
-        for scope in self
-            .scopes
-            .iter()
-            .rev()
-            .skip(identifier.depth().unwrap_or(0))
-        {
-            if scope.contains_key(identifier.identifier()) {
-                let value = scope.get(identifier.identifier()).unwrap();
-
-                return Ok(value.clone());
-            }
+        let depth = overwrite_depth.unwrap_or(identifier.depth().unwrap_or(0));
+        if depth > 0 {
+            return self
+                .enclosing
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .evaluate_variable(identifier, Some(depth - 1));
         }
-        Err(RuntimeError::UndefinedVariable(
-            identifier.identifier().to_string(),
-            identifier.line(),
-        ))
+
+        if self.values.contains_key(identifier.identifier()) {
+            let value = self.values.get(identifier.identifier()).unwrap();
+            return Ok(value.clone());
+        }
+
+        self.enclosing
+            .as_ref()
+            .map(|scope| scope.borrow().evaluate_variable(identifier, Some(0)))
+            .transpose()?
+            .ok_or(RuntimeError::UndefinedVariable(
+                identifier.identifier().to_string(),
+                identifier.line(),
+            ))
     }
 }
 
 pub struct RunState {
-    scopes: RefCell<RunScopes>,
+    scopes: RefCell<RunScopeRef>,
     functions_resolver: RefCell<FunctionsResolver>,
 }
 
 impl RunState {
     pub fn new(functions_resolver: FunctionsResolver, scopes: RunScopes) -> Self {
         Self {
-            scopes: RefCell::new(scopes),
+            scopes: RefCell::new(Rc::new(RefCell::new(scopes))),
             functions_resolver: RefCell::new(functions_resolver),
         }
     }
 
     pub fn void() -> Self {
         Self {
-            scopes: RefCell::new(RunScopes::new()),
+            scopes: RefCell::new(Rc::new(RefCell::new(RunScopes::new(None)))),
             functions_resolver: RefCell::new(FunctionsResolver::new().unwrap()),
         }
     }
@@ -101,6 +125,7 @@ impl RunState {
         depth: Option<usize>,
     ) {
         self.scopes
+            .borrow()
             .borrow_mut()
             .declare_variable(identifier, value, depth);
     }
@@ -108,25 +133,39 @@ impl RunState {
     #[inline]
     pub fn set_variable(&self, identifier: String, value: RuntimeValue, depth: Option<usize>) {
         self.scopes
+            .borrow()
             .borrow_mut()
             .set_variable(identifier, value, depth);
     }
 
     #[inline]
     pub fn enter_scope(&self) -> Result<(), RuntimeError> {
-        self.scopes.borrow_mut().enter_scope()
+        let enclosing = self.scopes.borrow().clone();
+        let new_scope = RunScopes::new(Some(enclosing));
+        self.scopes.replace(Rc::new(RefCell::new(new_scope)));
+        Ok(())
     }
 
     #[inline]
     pub fn exit_scope(&self) -> Result<(), RuntimeError> {
-        self.scopes.borrow_mut().exit_scope()
+        let enclosing = self
+            .scopes
+            .borrow()
+            .borrow()
+            .get_enclosing()
+            .ok_or(RuntimeError::OutOfScope)?;
+        self.scopes.replace(enclosing);
+        Ok(())
     }
 
     pub fn evaluate_variable(
         &self,
         identifier: &EvaluableIdentifier,
     ) -> Result<RuntimeValue, RuntimeError> {
-        self.scopes.borrow().evaluate_variable(identifier)
+        self.scopes
+            .borrow()
+            .borrow()
+            .evaluate_variable(identifier, None)
     }
 
     pub fn call_function(

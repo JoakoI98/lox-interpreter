@@ -20,7 +20,7 @@ pub struct Program {
 impl Program {
     pub fn new_with_context(program_ast: ProgramAst) -> Result<Self, RuntimeError> {
         let context = BuilderContext::new()?;
-        let mut scopes = RunScopes::new();
+        let mut scopes = RunScopes::new(None);
         Self::initialize_context(&context, &mut scopes)?;
         let runner = program_ast.accept_with_context(&RunnableBuilder, &context)?;
         let state = RunState::new(context.functions_resolver.take(), scopes);

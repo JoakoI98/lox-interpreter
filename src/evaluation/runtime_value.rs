@@ -50,6 +50,8 @@ pub enum RuntimeError {
     NativeFunctionError(#[from] NativeFunctionError),
     #[error("Function not found")]
     FunctionNotFound,
+    #[error("Out of scope")]
+    OutOfScope,
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
