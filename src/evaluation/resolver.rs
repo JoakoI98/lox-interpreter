@@ -4,8 +4,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ResolverError {
-    #[error("Can't read local variable in its own initializer.")]
-    LocalVariableInInitializer,
+    #[error("[line {1}] Error at '{0}': Can't read local variable in its own initializer.")]
+    LocalVariableInInitializer(String, usize),
 
     #[error("Identifier not found")]
     UndeclaredIdentifier,
@@ -73,14 +73,17 @@ impl Resolver {
         Ok(())
     }
 
-    pub fn resolve(&self, identifier: &str) -> Result<Option<usize>, ResolverError> {
+    pub fn resolve(&self, identifier: &str, line: usize) -> Result<Option<usize>, ResolverError> {
         for (index, scope) in self.scopes.iter().rev().enumerate() {
             if let Some(value) = scope.get(identifier) {
                 let is_global_scope = index == self.scopes.len() - 1;
                 if *value || is_global_scope {
                     return Ok(Some(index));
                 }
-                return Err(ResolverError::LocalVariableInInitializer);
+                return Err(ResolverError::LocalVariableInInitializer(
+                    identifier.to_string(),
+                    line,
+                ));
             }
         }
         Ok(None)

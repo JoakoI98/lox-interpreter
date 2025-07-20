@@ -21,7 +21,7 @@ impl EvaluableIdentifier {
             _ => return Err(RuntimeError::ASTInvalidStructure),
         };
         Ok(Self {
-            depth: resolver.resolve(&identifier_string)?,
+            depth: resolver.resolve(&identifier_string, token.line)?,
             identifier: identifier_string,
             line: token.line,
         })
