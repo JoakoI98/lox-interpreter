@@ -40,10 +40,6 @@ impl Callable {
     pub fn get_pointer(&self) -> usize {
         self.pointer
     }
-
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
 }
 
 impl PartialEq for Callable {

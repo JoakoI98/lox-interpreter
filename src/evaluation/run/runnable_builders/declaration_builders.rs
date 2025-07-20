@@ -1,7 +1,5 @@
 use crate::common::{Visitable, VisitorWithContext};
-use crate::evaluation::evaluator::{
-    AssignmentEvaluatorBuilder, EvaluableIdentifier, FunctionCallable,
-};
+use crate::evaluation::evaluator::{AssignmentEvaluatorBuilder, FunctionCallable};
 use crate::evaluation::run::runnable::{
     FunctionDeclarationRunnable, Runnable, VarDeclarationRunnable,
 };
