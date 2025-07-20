@@ -7,17 +7,28 @@ use crate::evaluation::{
 #[derive(Debug)]
 pub struct ClassInitializationCallable {
     identifier: String,
+    methods: Vec<(usize, String)>,
 }
 
 impl ClassInitializationCallable {
-    pub fn new(identifier: String) -> Self {
-        Self { identifier }
+    pub fn new(identifier: String, methods: Vec<(usize, String)>) -> Self {
+        Self {
+            identifier,
+            methods,
+        }
     }
 }
 
 impl Evaluable for ClassInitializationCallable {
     fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError> {
         let instance_index = state.initialize_instance()?;
+        for (pointer, method_name) in &self.methods {
+            state.set_instance_value(
+                instance_index,
+                &method_name,
+                RuntimeValue::callable(*pointer, method_name.clone(), None, true),
+            )?;
+        }
 
         Ok(RuntimeValue::ClassInstance(
             instance_index,

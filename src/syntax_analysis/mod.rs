@@ -20,4 +20,4 @@ pub use productions::statement::{
     ReturnStatement, Statement, StatementType, WhileStatement,
 };
 
-pub use productions::functions::{AccessorOrArgumentsType, ArgumentsList, Call};
+pub use productions::functions::{AccessorOrArgumentsType, ArgumentsList, Call, Function};
