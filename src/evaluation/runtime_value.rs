@@ -5,14 +5,49 @@ use std::{
 
 use thiserror::Error;
 
-use crate::evaluation::run::NativeFunctionError;
+use crate::evaluation::run::{NativeFunctionError, RunScopeRef};
+
+#[derive(Debug, Clone)]
+pub struct Callable {
+    pointer: usize,
+    name: String,
+    scope: Option<RunScopeRef>,
+}
+
+impl Callable {
+    pub fn new(pointer: usize, name: String, scope: Option<RunScopeRef>) -> Self {
+        Self {
+            pointer,
+            name,
+            scope,
+        }
+    }
+
+    pub fn get_scope(&self) -> Option<RunScopeRef> {
+        self.scope.as_ref().map(|scope| scope.clone())
+    }
+
+    pub fn get_pointer(&self) -> usize {
+        self.pointer
+    }
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl PartialEq for Callable {
+    fn eq(&self, other: &Self) -> bool {
+        self.pointer == other.pointer
+    }
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum RuntimeValue {
     Number(f64),
     String(String),
     Boolean(bool),
-    Callable(usize, String),
+    Callable(Callable),
     Nil,
 }
 
@@ -23,7 +58,7 @@ impl Display for RuntimeValue {
             RuntimeValue::String(s) => write!(f, "{}", s),
             RuntimeValue::Boolean(b) => write!(f, "{}", b),
             RuntimeValue::Nil => write!(f, "nil"),
-            RuntimeValue::Callable(_, name) => write!(f, "<fn {}>", name),
+            RuntimeValue::Callable(c) => write!(f, "<fn {}>", c.name),
         }
     }
 }
@@ -129,6 +164,10 @@ impl Sub for RuntimeValue {
 }
 
 impl RuntimeValue {
+    pub fn callable(pointer: usize, name: String, scope: Option<RunScopeRef>) -> Self {
+        RuntimeValue::Callable(Callable::new(pointer, name, scope))
+    }
+
     pub fn to_bool(&self) -> Result<bool> {
         match self {
             RuntimeValue::Boolean(b) => Ok(*b),

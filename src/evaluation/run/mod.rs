@@ -2,7 +2,7 @@ mod run_state;
 mod runnable;
 mod runnable_builders;
 
-pub use run_state::{RunScopes, RunState};
+pub use run_state::{RunScopeRef, RunScopes, RunState};
 pub use runnable::Runnable;
 pub use runnable::{Callable, NativeFunctionError};
 
@@ -42,7 +42,7 @@ impl Program {
                 .add_function(function)?;
             context.resolver.borrow_mut().declare(name)?;
             context.resolver.borrow_mut().define(name)?;
-            let callable_value = RuntimeValue::Callable(pointer, name.to_string());
+            let callable_value = RuntimeValue::callable(pointer, name.to_string(), None);
             scopes.declare_variable(name.to_string(), Some(callable_value), None);
         }
 

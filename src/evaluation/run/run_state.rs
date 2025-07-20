@@ -5,13 +5,12 @@ use crate::evaluation::{
     RuntimeValue,
 };
 
-#[derive(Debug)]
 pub struct RunScopes {
     values: HashMap<String, RuntimeValue>,
     enclosing: Option<RunScopeRef>,
 }
 
-type RunScopeRef = Rc<RefCell<RunScopes>>;
+pub type RunScopeRef = Rc<RefCell<RunScopes>>;
 
 impl RunScopes {
     pub fn new(enclosing: Option<RunScopeRef>) -> Self {
@@ -95,6 +94,27 @@ impl RunScopes {
                 identifier.line(),
             ))
     }
+
+    fn print_with_depth(&self, depth: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(enclosing) = &self.enclosing {
+            enclosing.borrow().print_with_depth(depth - 1, f)?;
+        }
+        write!(f, "{:?}", self.values)
+    }
+
+    fn depth(&self) -> usize {
+        if let Some(enclosing) = &self.enclosing {
+            return enclosing.borrow().depth() + 1;
+        }
+        0
+    }
+}
+
+impl std::fmt::Debug for RunScopes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.print_with_depth(self.depth(), f)?;
+        Ok(())
+    }
 }
 
 pub struct RunState {
@@ -172,11 +192,27 @@ impl RunState {
         &self,
         index: usize,
         arguments: Vec<RuntimeValue>,
+        function_scope: Option<RunScopeRef>,
     ) -> Result<RuntimeValue, RuntimeError> {
         let resolver = self.functions_resolver.borrow();
         let pointer = resolver
             .resolve(index)
             .ok_or(RuntimeError::FunctionNotFound)?;
-        pointer.call(arguments, self)
+        let restore = self.replace_scopes(function_scope.unwrap_or(self.get_current_scope()));
+        let result = pointer.call(arguments, self);
+        restore();
+        result
+    }
+
+    pub fn replace_scopes(&self, scopes: RunScopeRef) -> impl FnOnce() + use<'_> {
+        let current = self.scopes.replace(scopes);
+        let restore = || {
+            self.scopes.replace(current);
+        };
+        return restore;
+    }
+
+    pub fn get_current_scope(&self) -> RunScopeRef {
+        self.scopes.borrow().clone()
     }
 }

@@ -85,11 +85,13 @@ impl FunctionDeclarationRunnable {
 
 impl Runnable for FunctionDeclarationRunnable {
     fn run(&self, state: &RunState) -> RunResult {
+        let scope = state.get_current_scope();
         state.declare_variable(
             self.identifier.clone(),
-            Some(RuntimeValue::Callable(
+            Some(RuntimeValue::callable(
                 self.function_pointer,
                 self.identifier.clone(),
+                Some(scope),
             )),
             Some(0),
         );
