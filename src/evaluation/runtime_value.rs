@@ -7,11 +7,21 @@ use thiserror::Error;
 
 use crate::evaluation::run::{NativeFunctionError, RunScopeRef};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Callable {
     pointer: usize,
     name: String,
     scope: Option<RunScopeRef>,
+}
+
+impl std::fmt::Debug for Callable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Callable {{ pointer: {}, name: {} }}",
+            self.pointer, self.name
+        )
+    }
 }
 
 impl Callable {

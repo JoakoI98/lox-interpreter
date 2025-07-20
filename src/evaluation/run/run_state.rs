@@ -99,7 +99,7 @@ impl RunScopes {
         if let Some(enclosing) = &self.enclosing {
             enclosing.borrow().print_with_depth(depth - 1, f)?;
         }
-        write!(f, "{:?}", self.values)
+        write!(f, "{}: {:?}\n", depth, self.values)
     }
 
     fn depth(&self) -> usize {
@@ -198,8 +198,12 @@ impl RunState {
         let pointer = resolver
             .resolve(index)
             .ok_or(RuntimeError::FunctionNotFound)?;
+        // println!("current_scope:\n{:?}", self.get_current_scope());
+        // println!("function_scope:\n{:?}", function_scope);
+
         let restore = self.replace_scopes(function_scope.unwrap_or(self.get_current_scope()));
-        let result = pointer.call(arguments, self);
+
+        let result: Result<RuntimeValue, RuntimeError> = pointer.call(arguments, self);
         restore();
         result
     }

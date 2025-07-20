@@ -84,9 +84,9 @@ impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, Builder
             .lexeme
             .clone();
 
-        context.resolver.borrow_mut().enter_scope()?;
         context.resolver.borrow_mut().declare(&function_ident)?;
         context.resolver.borrow_mut().define(&function_ident)?;
+        context.resolver.borrow_mut().enter_scope()?;
         for parameter in &parameters {
             context.resolver.borrow_mut().declare(&parameter)?;
             context.resolver.borrow_mut().define(&parameter)?;
