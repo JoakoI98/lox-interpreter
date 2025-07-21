@@ -1,6 +1,7 @@
 use crate::evaluation::{
     evaluator::Evaluable,
     run::{Callable, Runnable},
+    runtime_value::CallableType,
     RunState, RuntimeError, RuntimeValue,
 };
 
@@ -21,12 +22,17 @@ impl ClassInitializationCallable {
 
 impl Evaluable for ClassInitializationCallable {
     fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError> {
-        let instance_index = state.initialize_instance()?;
+        let instance_index = state.initialize_instance(self.identifier.clone())?;
         for (pointer, method_name) in &self.methods {
             state.set_instance_value(
                 instance_index,
                 &method_name,
-                RuntimeValue::callable(*pointer, method_name.clone(), None, true),
+                RuntimeValue::callable(
+                    *pointer,
+                    method_name.clone(),
+                    None,
+                    CallableType::Method(instance_index),
+                ),
             )?;
         }
 
@@ -46,7 +52,12 @@ impl Callable for ClassInitializationCallable {
         Ok(())
     }
 
-    fn call(&self, _: Vec<RuntimeValue>, state: &RunState) -> Result<RuntimeValue, RuntimeError> {
+    fn call(
+        &self,
+        _: Vec<RuntimeValue>,
+        _: Option<usize>,
+        state: &RunState,
+    ) -> Result<RuntimeValue, RuntimeError> {
         self.eval(state)
     }
 }
@@ -74,7 +85,7 @@ impl Runnable for ClassDeclarationRunnable {
                 self.class_constructor_pointer,
                 self.identifier.clone(),
                 None,
-                true,
+                CallableType::ClassConstructor,
             )),
             Some(0),
         );

@@ -86,6 +86,7 @@ impl RunState {
         index: usize,
         arguments: Vec<RuntimeValue>,
         function_scope: Option<RunScopeRef>,
+        this_pointer: Option<usize>,
     ) -> Result<RuntimeValue, RuntimeError> {
         let resolver = self.functions_resolver.borrow();
         let pointer = resolver
@@ -95,8 +96,8 @@ impl RunState {
         // println!("function_scope:\n{:?}", function_scope);
 
         let restore = self.replace_scopes(function_scope.unwrap_or(self.get_current_scope()));
-
-        let result: Result<RuntimeValue, RuntimeError> = pointer.call(arguments, self);
+        let result: Result<RuntimeValue, RuntimeError> =
+            pointer.call(arguments, this_pointer, self);
         restore();
         result
     }
@@ -113,8 +114,10 @@ impl RunState {
         self.scopes.borrow().clone()
     }
 
-    pub fn initialize_instance(&self) -> Result<usize, RuntimeError> {
-        self.instance_manager.borrow_mut().initialize_instance()
+    pub fn initialize_instance(&self, class_name: String) -> Result<usize, RuntimeError> {
+        self.instance_manager
+            .borrow_mut()
+            .initialize_instance(class_name)
     }
 
     pub fn get_instance_value(
@@ -136,5 +139,28 @@ impl RunState {
         self.instance_manager
             .borrow_mut()
             .set_instance_value(index, key, value)
+    }
+
+    pub fn set_this(&self, this: usize) {
+        self.scopes.borrow().borrow_mut().set_this(this);
+    }
+
+    pub fn get_this(&self) -> Option<usize> {
+        self.scopes.borrow().borrow().get_this()
+    }
+
+    pub fn unset_this(&self) {
+        self.scopes.borrow().borrow_mut().unset_this();
+    }
+
+    pub fn get_class_name(&self, index: usize) -> Result<String, RuntimeError> {
+        self.instance_manager
+            .borrow()
+            .get_class_name(index)
+            .map(|s| s.to_string())
+    }
+
+    pub fn print_scopes(&self) {
+        println!("scopes:\n{:?}", self.scopes.borrow().borrow());
     }
 }

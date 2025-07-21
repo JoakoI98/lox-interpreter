@@ -4,7 +4,7 @@ use ast_leaf::ast_leaf;
 
 use super::super::parsing::primitives::{
     And, Bang, BangEqual, EqualEqual, False, Greater, GreaterEqual, Identifier, LeftParen, Less,
-    LessEqual, Minus, Nil, Number, Or, Plus, RightParen, Slash, Star, String, True,
+    LessEqual, Minus, Nil, Number, Or, Plus, RightParen, Slash, Star, String, This, True,
 };
 use super::super::parsing::{
     ExpectedEnum, ParseError, ParseStream, Parser, Result, UnexpectedTokenError,
@@ -14,7 +14,7 @@ use super::functions::Call;
 
 use crate::tokenizer::Token;
 
-#[ast_leaf(( "IDENT" |"NUMBER" | "STRING" | "true" | "false" | "nil" | 1: "(" Expression ")" ))]
+#[ast_leaf(( "IDENT" |"NUMBER" | "STRING" | "true" | "false" | "this" | "nil" | 1: "(" Expression ")" ))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct PrimaryExpression {
     #[Type]

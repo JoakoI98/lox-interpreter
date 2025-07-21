@@ -12,19 +12,26 @@ use crate::evaluation::{
 };
 
 #[derive(Clone)]
+pub enum CallableType {
+    Function,
+    ClassConstructor,
+    Method(usize),
+}
+
+#[derive(Clone)]
 pub struct Callable {
     pointer: usize,
     name: String,
     scope: Option<RunScopeRef>,
-    is_class_constructor: bool,
+    ty: CallableType,
 }
 
 impl std::fmt::Debug for Callable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let is = if self.is_class_constructor {
-            "class"
-        } else {
-            "function"
+        let is = match self.ty {
+            CallableType::Function => "function",
+            CallableType::ClassConstructor => "class",
+            CallableType::Method(_) => "method",
         };
         write!(
             f,
@@ -36,25 +43,21 @@ impl std::fmt::Debug for Callable {
 
 impl Display for Callable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.is_class_constructor {
-            return write!(f, "{}", self.name);
+        match self.ty {
+            CallableType::Function => write!(f, "<fn {}>", self.name),
+            CallableType::ClassConstructor => write!(f, "{}", self.name),
+            CallableType::Method(_) => write!(f, "{}", self.name),
         }
-        write!(f, "<fn {}>", self.name)
     }
 }
 
 impl Callable {
-    pub fn new(
-        pointer: usize,
-        name: String,
-        scope: Option<RunScopeRef>,
-        is_class_constructor: bool,
-    ) -> Self {
+    pub fn new(pointer: usize, name: String, scope: Option<RunScopeRef>, ty: CallableType) -> Self {
         Self {
             pointer,
             name,
             scope,
-            is_class_constructor,
+            ty,
         }
     }
 
@@ -64,6 +67,13 @@ impl Callable {
 
     pub fn get_pointer(&self) -> usize {
         self.pointer
+    }
+
+    pub fn get_this_pointer(&self) -> Option<usize> {
+        match self.ty {
+            CallableType::Method(pointer) => Some(pointer),
+            _ => None,
+        }
     }
 }
 
@@ -128,6 +138,8 @@ pub enum RuntimeError {
     InstanceNotFound(usize),
     #[error("{0}")]
     ClassAccessorError(#[from] ClassAccessorError),
+    #[error("This not in scope")]
+    ThisNotInScope,
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
@@ -209,9 +221,9 @@ impl RuntimeValue {
         pointer: usize,
         name: String,
         scope: Option<RunScopeRef>,
-        is_class_constructor: bool,
+        ty: CallableType,
     ) -> Self {
-        RuntimeValue::Callable(Callable::new(pointer, name, scope, is_class_constructor))
+        RuntimeValue::Callable(Callable::new(pointer, name, scope, ty))
     }
 
     pub fn to_bool(&self) -> Result<bool> {

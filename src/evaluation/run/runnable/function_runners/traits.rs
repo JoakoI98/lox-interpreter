@@ -11,6 +11,7 @@ pub trait Callable: Evaluable {
     fn call(
         &self,
         arguments: Vec<RuntimeValue>,
+        this_pointer: Option<usize>,
         state: &RunState,
     ) -> Result<RuntimeValue, RuntimeError> {
         if arguments.len() != self.arity() {
@@ -18,6 +19,9 @@ pub trait Callable: Evaluable {
         }
 
         state.enter_scope()?;
+        if let Some(this_pointer) = this_pointer {
+            state.set_this(this_pointer);
+        }
         self.define_arguments(arguments, state)?;
         let result = self.eval(state)?;
         state.exit_scope()?;

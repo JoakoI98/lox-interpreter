@@ -8,6 +8,7 @@ pub use runnable::{Callable, NativeFunctionError};
 
 use crate::common::Visitable;
 use crate::evaluation::run::runnable::get_native_functions;
+use crate::evaluation::runtime_value::CallableType;
 use crate::evaluation::{BuilderContext, RuntimeValue};
 use crate::{evaluation::RuntimeError, syntax_analysis::ProgramAst};
 use runnable_builders::RunnableBuilder;
@@ -42,7 +43,8 @@ impl Program {
                 .add_function(function)?;
             context.resolver.borrow_mut().declare(name, 0)?;
             context.resolver.borrow_mut().define(name)?;
-            let callable_value = RuntimeValue::callable(pointer, name.to_string(), None, false);
+            let callable_value =
+                RuntimeValue::callable(pointer, name.to_string(), None, CallableType::Function);
             scopes.declare_variable(name.to_string(), Some(callable_value), None);
         }
 

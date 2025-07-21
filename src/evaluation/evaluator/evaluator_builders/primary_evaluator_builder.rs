@@ -27,6 +27,7 @@ impl VisitorWithContext<&PrimaryExpression, Result<Box<dyn Evaluable>>, BuilderC
             .ok_or(RuntimeError::ASTInvalidStructure)?;
         match &node.token_type {
             PrimaryExpressionType::True => Ok(Box::new(PrimaryEvaluator::Boolean(true))),
+            PrimaryExpressionType::This => Ok(Box::new(PrimaryEvaluator::This)),
             PrimaryExpressionType::False => Ok(Box::new(PrimaryEvaluator::Boolean(false))),
             PrimaryExpressionType::Nil => Ok(Box::new(PrimaryEvaluator::Nil)),
             PrimaryExpressionType::Number

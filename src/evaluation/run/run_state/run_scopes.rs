@@ -4,6 +4,7 @@ use crate::evaluation::{evaluator::EvaluableIdentifier, RuntimeError, RuntimeVal
 
 pub struct RunScopes {
     values: HashMap<String, RuntimeValue>,
+    this: Option<usize>,
     enclosing: Option<RunScopeRef>,
 }
 
@@ -14,6 +15,7 @@ impl RunScopes {
         Self {
             values: HashMap::new(),
             enclosing,
+            this: None,
         }
     }
 
@@ -96,7 +98,7 @@ impl RunScopes {
         if let Some(enclosing) = &self.enclosing {
             enclosing.borrow().print_with_depth(depth - 1, f)?;
         }
-        write!(f, "{}: {:?}\n", depth, self.values)
+        write!(f, "{} this({:?}): {:?}\n", depth, self.this, self.values)
     }
 
     fn depth(&self) -> usize {
@@ -104,6 +106,24 @@ impl RunScopes {
             return enclosing.borrow().depth() + 1;
         }
         0
+    }
+
+    pub fn set_this(&mut self, this: usize) {
+        self.this = Some(this);
+    }
+
+    pub fn get_this(&self) -> Option<usize> {
+        let mut this = self.this;
+        if this.is_none() {
+            if let Some(enclosing) = &self.enclosing {
+                this = enclosing.borrow().get_this();
+            }
+        }
+        this
+    }
+
+    pub fn unset_this(&mut self) {
+        self.this = None;
     }
 }
 

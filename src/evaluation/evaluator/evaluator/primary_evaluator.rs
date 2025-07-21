@@ -11,6 +11,7 @@ pub enum PrimaryEvaluator {
     Boolean(bool),
     Identifier(EvaluableIdentifier),
     Nil,
+    This,
 }
 
 impl PrimaryEvaluator {
@@ -29,6 +30,11 @@ impl Evaluable for PrimaryEvaluator {
             PrimaryEvaluator::Boolean(value) => Ok(RuntimeValue::Boolean(value.clone())),
             PrimaryEvaluator::Nil => Ok(RuntimeValue::Nil),
             PrimaryEvaluator::Identifier(identifier) => run_state.evaluate_variable(identifier),
+            PrimaryEvaluator::This => {
+                let pointer = run_state.get_this().ok_or(RuntimeError::ThisNotInScope)?;
+                let class_name = run_state.get_class_name(pointer)?;
+                Ok(RuntimeValue::ClassInstance(pointer, class_name))
+            }
         }
     }
 }

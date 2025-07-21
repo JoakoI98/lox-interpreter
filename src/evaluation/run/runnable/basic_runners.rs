@@ -1,6 +1,6 @@
 use super::super::run_state::RunState;
 use crate::evaluation::evaluator::Evaluable;
-use crate::evaluation::runtime_value::Result as RuntimeResult;
+use crate::evaluation::runtime_value::{CallableType, Result as RuntimeResult};
 use crate::evaluation::RuntimeValue;
 
 pub type RunResult = RuntimeResult<Option<RuntimeValue>>;
@@ -92,7 +92,7 @@ impl Runnable for FunctionDeclarationRunnable {
                 self.function_pointer,
                 self.identifier.clone(),
                 Some(scope),
-                false,
+                CallableType::Function,
             )),
             Some(0),
         );

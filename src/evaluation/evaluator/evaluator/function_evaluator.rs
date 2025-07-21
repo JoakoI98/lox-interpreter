@@ -30,8 +30,8 @@ impl FunctionEvaluator {
 impl Evaluable for FunctionEvaluator {
     fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError> {
         let callable = self.callable.eval(state)?;
-        let (index, scope) = match callable {
-            RuntimeValue::Callable(c) => (c.get_pointer(), c.get_scope()),
+        let (index, scope, this_pointer) = match callable {
+            RuntimeValue::Callable(c) => (c.get_pointer(), c.get_scope(), c.get_this_pointer()),
             _ => return Err(FunctionEvaluationError::UnCallableFunction(callable).into()),
         };
         let arguments = self
@@ -39,7 +39,7 @@ impl Evaluable for FunctionEvaluator {
             .iter()
             .map(|arg| arg.eval(state))
             .collect::<Result<Vec<RuntimeValue>, RuntimeError>>()?;
-        state.call_function(index, arguments, scope)
+        state.call_function(index, arguments, scope, this_pointer)
     }
 }
 

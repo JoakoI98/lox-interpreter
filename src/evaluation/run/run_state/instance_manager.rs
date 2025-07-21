@@ -7,7 +7,7 @@ const INITIAL_INSTANCE_CAPACITY: usize = 500;
 pub type ClassInstance = HashMap<String, RuntimeValue>;
 
 pub struct InstanceManager {
-    instances: Vec<Option<ClassInstance>>,
+    instances: Vec<Option<(String, ClassInstance)>>,
     available: LinkedList<usize>,
 }
 
@@ -28,7 +28,7 @@ impl InstanceManager {
         })
     }
 
-    pub fn initialize_instance(&mut self) -> Result<usize, RuntimeError> {
+    pub fn initialize_instance(&mut self, class_name: String) -> Result<usize, RuntimeError> {
         let mut available = self.available.pop_front();
         if available.is_none() {
             let current_capacity = self.instances.len();
@@ -40,7 +40,7 @@ impl InstanceManager {
         }
         let available = available.ok_or(RuntimeError::NotEnoughSpaceToAllocateNewInstance)?;
 
-        self.instances[available] = Some(ClassInstance::new());
+        self.instances[available] = Some((class_name, ClassInstance::new()));
 
         Ok(available)
     }
@@ -55,7 +55,7 @@ impl InstanceManager {
             .map(|o| o.as_ref())
             .flatten()
             .ok_or(RuntimeError::InstanceNotFound(index))
-            .map(|o| o.get(key).cloned())
+            .map(|o| o.1.get(key).cloned())
     }
 
     pub fn set_instance_value(
@@ -70,7 +70,16 @@ impl InstanceManager {
             .map(|o| o.as_mut())
             .flatten()
             .ok_or(RuntimeError::InstanceNotFound(index))?;
-        instance.insert(key.to_string(), value);
+        instance.1.insert(key.to_string(), value);
         Ok(())
+    }
+
+    pub fn get_class_name(&self, index: usize) -> Result<&str, RuntimeError> {
+        self.instances
+            .get(index)
+            .map(|o| o.as_ref())
+            .flatten()
+            .ok_or(RuntimeError::InstanceNotFound(index))
+            .map(|o| o.0.as_str())
     }
 }
