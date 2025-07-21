@@ -13,6 +13,7 @@ pub use core::{Evaluable, EvaluableIdentifier};
 pub use assignment_evaluator::AssignmentEvaluator;
 pub use binary_evaluator::{BinaryEvaluator, BinaryOperation};
 pub use class_evaluator::{ClassAccessorError, ClassAccessorEvaluator, SetExpressionEvaluator};
+pub use function_evaluator::INIT_FUNCTION_NAME;
 pub use function_evaluator::{FunctionCallable, FunctionEvaluationError, FunctionEvaluator};
 pub use primary_evaluator::PrimaryEvaluator;
 pub use unary_evaluator::{UnaryEvaluator, UnaryOperation};

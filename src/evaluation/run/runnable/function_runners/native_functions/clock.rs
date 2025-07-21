@@ -9,16 +9,13 @@ use crate::evaluation::{
 pub struct ClockNativeFunction;
 
 impl Callable for ClockNativeFunction {
-    fn arity(&self) -> usize {
-        0
-    }
-
-    fn define_arguments(
+    fn call(
         &self,
         _arguments: Vec<RuntimeValue>,
-        _state: &RunState,
-    ) -> Result<(), RuntimeError> {
-        Ok(())
+        _this_pointer: Option<usize>,
+        state: &RunState,
+    ) -> Result<RuntimeValue, RuntimeError> {
+        self.eval(state)
     }
 }
 

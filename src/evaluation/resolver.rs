@@ -31,6 +31,7 @@ pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
     function_depth: usize,
     class_depth: usize,
+    method_stack: std::collections::LinkedList<String>,
 }
 
 const INITIAL_SCOPE_CAPACITY: usize = 50;
@@ -41,10 +42,12 @@ impl Resolver {
         let mut scopes = Vec::new();
         scopes.try_reserve_exact(INITIAL_SCOPE_CAPACITY)?;
         scopes.push(HashMap::new());
+        let method_stack = std::collections::LinkedList::new();
         Ok(Self {
             scopes,
             function_depth: 0,
             class_depth: 0,
+            method_stack,
         })
     }
 
@@ -128,11 +131,13 @@ impl Resolver {
         Ok(None)
     }
 
-    pub fn enter_function(&mut self) {
+    pub fn enter_function(&mut self, name: String) {
+        self.method_stack.push_back(name);
         self.function_depth += 1;
     }
 
-    pub fn exit_function(&mut self) {
+    pub fn exit_function_or_method(&mut self) {
+        self.method_stack.pop_back();
         self.function_depth -= 1;
     }
 
@@ -150,5 +155,14 @@ impl Resolver {
 
     pub fn is_in_class(&self) -> bool {
         self.class_depth > 0
+    }
+
+    pub fn enter_method(&mut self, name: String) {
+        self.method_stack.push_back(name);
+        self.function_depth += 1;
+    }
+
+    pub fn is_in_method(&self) -> Option<String> {
+        self.method_stack.back().cloned()
     }
 }

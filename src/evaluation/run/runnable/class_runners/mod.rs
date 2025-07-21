@@ -1,5 +1,5 @@
 use crate::evaluation::{
-    evaluator::Evaluable,
+    evaluator::{Evaluable, INIT_FUNCTION_NAME},
     run::{Callable, Runnable},
     runtime_value::CallableType,
     RunState, RuntimeError, RuntimeValue,
@@ -44,21 +44,32 @@ impl Evaluable for ClassInitializationCallable {
 }
 
 impl Callable for ClassInitializationCallable {
-    fn arity(&self) -> usize {
-        0
-    }
-
-    fn define_arguments(&self, _: Vec<RuntimeValue>, _: &RunState) -> Result<(), RuntimeError> {
-        Ok(())
-    }
-
     fn call(
         &self,
-        _: Vec<RuntimeValue>,
+        arguments: Vec<RuntimeValue>,
         _: Option<usize>,
         state: &RunState,
     ) -> Result<RuntimeValue, RuntimeError> {
-        self.eval(state)
+        let value = self.eval(state)?;
+        match value {
+            RuntimeValue::ClassInstance(this_pointer, _) => {
+                let init_callable = state.get_instance_value(this_pointer, INIT_FUNCTION_NAME)?;
+                match init_callable {
+                    Some(RuntimeValue::Callable(callable)) => {
+                        state.call_function(
+                            callable.get_pointer(),
+                            arguments,
+                            None,
+                            Some(this_pointer),
+                        )?;
+                    }
+                    _ => {}
+                }
+            }
+            _ => unreachable!(),
+        }
+
+        Ok(value)
     }
 }
 

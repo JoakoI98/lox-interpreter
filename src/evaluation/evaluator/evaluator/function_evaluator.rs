@@ -6,6 +6,8 @@ use crate::evaluation::{
     RunState, RuntimeError, RuntimeValue,
 };
 
+pub const INIT_FUNCTION_NAME: &str = "init";
+
 #[derive(Debug, Error)]
 pub enum FunctionEvaluationError {
     #[error("Can only call functions and classes.\n[line {0}]")]
@@ -53,13 +55,15 @@ impl Evaluable for FunctionEvaluator {
 pub struct FunctionCallable {
     function_block: Box<dyn Runnable>,
     parameters: Vec<String>,
+    name: String,
 }
 
 impl FunctionCallable {
-    pub fn new(function_block: Box<dyn Runnable>, parameters: Vec<String>) -> Self {
+    pub fn new(function_block: Box<dyn Runnable>, parameters: Vec<String>, name: String) -> Self {
         Self {
             function_block,
             parameters,
+            name,
         }
     }
 }
@@ -71,11 +75,7 @@ impl Evaluable for FunctionCallable {
     }
 }
 
-impl Callable for FunctionCallable {
-    fn arity(&self) -> usize {
-        self.parameters.len()
-    }
-
+impl FunctionCallable {
     fn define_arguments(
         &self,
         arguments: Vec<RuntimeValue>,
@@ -85,5 +85,31 @@ impl Callable for FunctionCallable {
             state.declare_variable(self.parameters[i].clone(), Some(argument.clone()), Some(0));
         }
         Ok(())
+    }
+}
+
+impl Callable for FunctionCallable {
+    fn call(
+        &self,
+        arguments: Vec<RuntimeValue>,
+        this_pointer: Option<usize>,
+        state: &RunState,
+    ) -> Result<RuntimeValue, RuntimeError> {
+        if arguments.len() != self.parameters.len() {
+            return Err(RuntimeError::ArityMismatch);
+        }
+
+        state.enter_scope()?;
+        if let Some(this_pointer) = this_pointer {
+            state.set_this(this_pointer);
+        }
+        self.define_arguments(arguments, state)?;
+        let result = self.eval(state)?;
+        state.exit_scope()?;
+        if self.name == INIT_FUNCTION_NAME && this_pointer.is_some() {
+            let class = state.get_class_name(this_pointer.unwrap())?;
+            return Ok(RuntimeValue::ClassInstance(this_pointer.unwrap(), class));
+        }
+        Ok(result)
     }
 }

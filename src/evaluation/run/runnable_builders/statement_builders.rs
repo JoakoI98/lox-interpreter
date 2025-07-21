@@ -1,6 +1,6 @@
 use super::declaration_builders::RunnableBuilder;
 use crate::common::{Visitable, VisitorWithContext};
-use crate::evaluation::evaluator::AssignmentEvaluatorBuilder;
+use crate::evaluation::evaluator::{AssignmentEvaluatorBuilder, INIT_FUNCTION_NAME};
 use crate::evaluation::resolver::ResolverError;
 use crate::evaluation::run::runnable::{
     ExpressionRunnable, ForStatementRunnable, IsStatementRunnable, PrintRunnable, ReturnRunnable,
@@ -161,6 +161,17 @@ impl VisitorWithContext<&ReturnStatement, Result<Box<dyn Runnable>>, BuilderCont
                 node.token_list.first().unwrap().line,
             )
             .into());
+        }
+
+        let is_method = context.resolver.borrow().is_in_method();
+
+        if let Some(f) = is_method {
+            if node.expr.is_some() && f == INIT_FUNCTION_NAME {
+                return Err(RuntimeError::ReturnFromInitializer(
+                    node.token_list.first().unwrap().line,
+                )
+                .into());
+            }
         }
         let expr = node
             .expr

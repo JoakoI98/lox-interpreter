@@ -15,7 +15,11 @@ use crate::tokenizer::TokenValue;
 pub struct RunnableBuilder;
 
 impl RunnableBuilder {
-    fn declare_function(node: &Function, context: &BuilderContext) -> Result<(usize, String)> {
+    fn declare_function(
+        node: &Function,
+        context: &BuilderContext,
+        is_method: bool,
+    ) -> Result<(usize, String)> {
         let function_ast = node;
         let parameters = &function_ast.parameters.parameters;
 
@@ -34,7 +38,17 @@ impl RunnableBuilder {
             .borrow_mut()
             .define(&function_ident_string)?;
         context.resolver.borrow_mut().enter_scope()?;
-        context.resolver.borrow_mut().enter_function();
+        if is_method {
+            context
+                .resolver
+                .borrow_mut()
+                .enter_method(function_ident_string.clone());
+        } else {
+            context
+                .resolver
+                .borrow_mut()
+                .enter_function(function_ident_string.clone());
+        }
         for parameter in parameters {
             context
                 .resolver
@@ -48,11 +62,12 @@ impl RunnableBuilder {
 
         let block_runnable = function_ast.block.accept_with_context(&Self, context)?;
         context.resolver.borrow_mut().exit_scope()?;
-        context.resolver.borrow_mut().exit_function();
+        context.resolver.borrow_mut().exit_function_or_method();
 
         let callable = FunctionCallable::new(
             block_runnable,
             parameters.iter().map(|p| p.token.lexeme.clone()).collect(),
+            function_ident_string.clone(),
         );
 
         let pointer = context
@@ -124,7 +139,8 @@ impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, Builder
         node: &FunctionDeclaration,
         context: &BuilderContext,
     ) -> Result<Box<dyn Runnable>> {
-        let (pointer, function_ident_string) = Self::declare_function(&node.function, context)?;
+        let (pointer, function_ident_string) =
+            Self::declare_function(&node.function, context, false)?;
         Ok(Box::new(FunctionDeclarationRunnable::new(
             pointer,
             function_ident_string,
@@ -155,7 +171,7 @@ impl VisitorWithContext<&ClassDeclaration, Result<Box<dyn Runnable>>, BuilderCon
         let methods = node
             .functions
             .iter()
-            .map(|(_, function)| Self::declare_function(function, context))
+            .map(|(_, function)| Self::declare_function(function, context, true))
             .collect::<Result<Vec<(usize, String)>>>()?;
         context.resolver.borrow_mut().exit_class();
 
