@@ -142,8 +142,6 @@ pub enum RuntimeError {
     ClassAccessorError(#[from] ClassAccessorError),
     #[error("This not in scope")]
     ThisNotInScope,
-    #[error("[line {0}] Error at 'return': Can't return a value from an initializer.")]
-    ReturnFromInitializer(usize),
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;

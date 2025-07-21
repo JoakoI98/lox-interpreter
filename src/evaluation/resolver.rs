@@ -24,6 +24,9 @@ pub enum ResolverError {
 
     #[error("Not enough space to allocate new scope")]
     NotEnoughSpace(#[from] TryReserveError),
+
+    #[error("[line {0}] Error at 'return': Can't return a value from an initializer.")]
+    ReturnFromInitializer(usize),
 }
 
 #[derive(Debug, Default)]

@@ -167,7 +167,7 @@ impl VisitorWithContext<&ReturnStatement, Result<Box<dyn Runnable>>, BuilderCont
 
         if let Some(f) = is_method {
             if node.expr.is_some() && f == INIT_FUNCTION_NAME {
-                return Err(RuntimeError::ReturnFromInitializer(
+                return Err(ResolverError::ReturnFromInitializer(
                     node.token_list.first().unwrap().line,
                 )
                 .into());
