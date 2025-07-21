@@ -8,21 +8,27 @@ use crate::evaluation::{
 
 #[derive(Debug, Error)]
 pub enum FunctionEvaluationError {
-    #[error("Function is not callable")]
-    UnCallableFunction(RuntimeValue),
+    #[error("Can only call functions and classes.\n[line {0}]")]
+    UnCallableFunction(usize),
 }
 
 #[derive(Debug)]
 pub struct FunctionEvaluator {
     pub callable: Box<dyn Evaluable>,
     pub arguments: Vec<Box<dyn Evaluable>>,
+    line: usize,
 }
 
 impl FunctionEvaluator {
-    pub fn new(callable: Box<dyn Evaluable>, arguments: Vec<Box<dyn Evaluable>>) -> Self {
+    pub fn new(
+        callable: Box<dyn Evaluable>,
+        arguments: Vec<Box<dyn Evaluable>>,
+        line: usize,
+    ) -> Self {
         Self {
             callable,
             arguments,
+            line,
         }
     }
 }
@@ -32,7 +38,7 @@ impl Evaluable for FunctionEvaluator {
         let callable = self.callable.eval(state)?;
         let (index, scope, this_pointer) = match callable {
             RuntimeValue::Callable(c) => (c.get_pointer(), c.get_scope(), c.get_this_pointer()),
-            _ => return Err(FunctionEvaluationError::UnCallableFunction(callable).into()),
+            _ => return Err(FunctionEvaluationError::UnCallableFunction(self.line).into()),
         };
         let arguments = self
             .arguments

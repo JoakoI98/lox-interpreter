@@ -13,6 +13,9 @@ pub enum ResolverError {
     #[error("[line {0}] Error at 'return': Can't return from top-level code.")]
     ReturnOutsideFunction(usize),
 
+    #[error("[line {0}] Error at 'this': Can't use 'this' outside of a class.")]
+    ThisOutsideClass(usize),
+
     #[error("Identifier not found")]
     UndeclaredIdentifier,
 
@@ -143,5 +146,9 @@ impl Resolver {
 
     pub fn exit_class(&mut self) {
         self.class_depth -= 1;
+    }
+
+    pub fn is_in_class(&self) -> bool {
+        self.class_depth > 0
     }
 }

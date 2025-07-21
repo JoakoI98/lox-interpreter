@@ -5,6 +5,7 @@ use super::super::evaluator::{UnaryEvaluator, UnaryOperation};
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::evaluator_builders::assignment_evaluator_builder::AssignmentEvaluatorBuilder;
 use crate::evaluation::evaluator::evaluator_builders::function_call_evaluator_builder::FunctionCallEvaluatorBuilder;
+use crate::evaluation::resolver::ResolverError;
 use crate::syntax_analysis::{PrimaryExpression, PrimaryExpressionType};
 use crate::syntax_analysis::{
     UnaryExpression, UnaryExpressionSelf, UnaryExpressionSelfType, UnaryExpressionType,
@@ -27,7 +28,12 @@ impl VisitorWithContext<&PrimaryExpression, Result<Box<dyn Evaluable>>, BuilderC
             .ok_or(RuntimeError::ASTInvalidStructure)?;
         match &node.token_type {
             PrimaryExpressionType::True => Ok(Box::new(PrimaryEvaluator::Boolean(true))),
-            PrimaryExpressionType::This => Ok(Box::new(PrimaryEvaluator::This)),
+            PrimaryExpressionType::This => {
+                if !context.resolver.borrow().is_in_class() {
+                    return Err(ResolverError::ThisOutsideClass(token.line).into());
+                }
+                Ok(Box::new(PrimaryEvaluator::This))
+            }
             PrimaryExpressionType::False => Ok(Box::new(PrimaryEvaluator::Boolean(false))),
             PrimaryExpressionType::Nil => Ok(Box::new(PrimaryEvaluator::Nil)),
             PrimaryExpressionType::Number

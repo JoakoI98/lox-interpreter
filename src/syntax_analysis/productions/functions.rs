@@ -39,6 +39,8 @@ pub struct ArgumentsList {
     #[Type]
     pub ty: ArgumentsListType,
     pub maybe_arguments: MaybeArguments,
+    #[TokenList]
+    pub token_list: Vec<Token>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

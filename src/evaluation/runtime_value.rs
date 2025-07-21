@@ -136,6 +136,8 @@ pub enum RuntimeError {
     NotEnoughSpaceToAllocateNewInstance,
     #[error("Instance not found")]
     InstanceNotFound(usize),
+    #[error("Undefined property '{0}'\n[line {1}]")]
+    UndefinedProperty(String, usize),
     #[error("{0}")]
     ClassAccessorError(#[from] ClassAccessorError),
     #[error("This not in scope")]

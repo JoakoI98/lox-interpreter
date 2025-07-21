@@ -4,7 +4,7 @@ use super::super::evaluator::Evaluable;
 use super::primary_evaluator_builder::PrimaryEvaluatorBuilder;
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::{ClassAccessorEvaluator, FunctionEvaluator};
-use crate::evaluation::AssignmentEvaluatorBuilder;
+use crate::evaluation::{AssignmentEvaluatorBuilder, RuntimeError};
 use crate::syntax_analysis::{AccessorOrArgumentsType, ArgumentsList, Call};
 
 pub struct FunctionCallEvaluatorBuilder;
@@ -60,6 +60,11 @@ impl VisitorWithContext<&Call, Result<Box<dyn Evaluable>>, BuilderContext>
                 let function_evaluator = FunctionEvaluator::new(
                     primary_evaluator,
                     arguments_list.accept_with_context(&Self, context)?,
+                    arguments_list
+                        .token_list
+                        .last()
+                        .ok_or(RuntimeError::ASTInvalidStructure)?
+                        .line,
                 );
                 Box::new(function_evaluator) as Box<dyn Evaluable>
             }
@@ -67,6 +72,7 @@ impl VisitorWithContext<&Call, Result<Box<dyn Evaluable>>, BuilderContext>
                 let class_accessor_evaluator = ClassAccessorEvaluator::new(
                     primary_evaluator,
                     accessor.identifier.token.lexeme.clone(),
+                    accessor.identifier.token.line,
                 );
                 Box::new(class_accessor_evaluator) as Box<dyn Evaluable>
             }
@@ -79,6 +85,11 @@ impl VisitorWithContext<&Call, Result<Box<dyn Evaluable>>, BuilderContext>
                     let function_evaluator = FunctionEvaluator::new(
                         current_evaluator,
                         arguments_list.accept_with_context(&Self, context)?,
+                        arguments_list
+                            .token_list
+                            .last()
+                            .ok_or(RuntimeError::ASTInvalidStructure)?
+                            .line,
                     );
                     Box::new(function_evaluator) as Box<dyn Evaluable>
                 }
@@ -86,6 +97,7 @@ impl VisitorWithContext<&Call, Result<Box<dyn Evaluable>>, BuilderContext>
                     let class_accessor_evaluator = ClassAccessorEvaluator::new(
                         current_evaluator,
                         accessor.identifier.token.lexeme.clone(),
+                        accessor.identifier.token.line,
                     );
                     Box::new(class_accessor_evaluator) as Box<dyn Evaluable>
                 }

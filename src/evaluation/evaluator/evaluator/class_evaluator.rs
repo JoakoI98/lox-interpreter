@@ -12,11 +12,16 @@ pub enum ClassAccessorError {
 pub struct ClassAccessorEvaluator {
     to_access: Box<dyn Evaluable>,
     to_get: String,
+    line: usize,
 }
 
 impl ClassAccessorEvaluator {
-    pub fn new(to_access: Box<dyn Evaluable>, to_get: String) -> Self {
-        Self { to_access, to_get }
+    pub fn new(to_access: Box<dyn Evaluable>, to_get: String, line: usize) -> Self {
+        Self {
+            to_access,
+            to_get,
+            line,
+        }
     }
 }
 
@@ -27,10 +32,14 @@ impl Evaluable for ClassAccessorEvaluator {
             RuntimeValue::ClassInstance(pointer, _) => pointer,
             _ => return Err(ClassAccessorError::Unaccessible(to_access).into()),
         };
-        let class_instance = state
-            .get_instance_value(class_instance_pointer, &self.to_get)?
-            .unwrap_or(RuntimeValue::Nil);
-        Ok(class_instance)
+        state
+            .get_instance_value(class_instance_pointer, &self.to_get)
+            .and_then(|o| {
+                o.ok_or(RuntimeError::UndefinedProperty(
+                    self.to_get.clone(),
+                    self.line,
+                ))
+            })
     }
 }
 
