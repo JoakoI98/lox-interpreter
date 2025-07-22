@@ -114,20 +114,25 @@ impl RunState {
         self.scopes.borrow().clone()
     }
 
-    pub fn initialize_instance(&self, class_name: String) -> Result<usize, RuntimeError> {
+    pub fn initialize_instance(
+        &self,
+        class_name: String,
+        super_class: Option<usize>,
+    ) -> Result<usize, RuntimeError> {
         self.instance_manager
             .borrow_mut()
-            .initialize_instance(class_name)
+            .initialize_instance(class_name, super_class)
     }
 
     pub fn get_instance_value(
         &self,
         index: usize,
         key: &str,
+        max_depth: Option<usize>,
     ) -> Result<Option<RuntimeValue>, RuntimeError> {
         self.instance_manager
             .borrow()
-            .get_instance_value(index, key)
+            .get_instance_value(index, key, max_depth)
     }
 
     pub fn set_instance_value(

@@ -1,5 +1,6 @@
 use crate::common::{Visitable, VisitorWithContext};
 use crate::evaluation::evaluator::{AssignmentEvaluatorBuilder, FunctionCallable};
+use crate::evaluation::resolver::ResolverError;
 use crate::evaluation::run::runnable::{ClassDeclarationRunnable, ClassInitializationCallable};
 use crate::evaluation::run::runnable::{
     FunctionDeclarationRunnable, Runnable, VarDeclarationRunnable,
@@ -175,12 +176,26 @@ impl VisitorWithContext<&ClassDeclaration, Result<Box<dyn Runnable>>, BuilderCon
             .collect::<Result<Vec<(usize, String)>>>()?;
         context.resolver.borrow_mut().exit_class();
 
-        let callable = ClassInitializationCallable::new(class_ident_string.clone(), methods);
+        let super_class = node
+            .super_class
+            .super_class
+            .as_ref()
+            .map(|super_class| context.get_class_definition(&super_class.token.lexeme))
+            .flatten();
+        if super_class.is_none() && node.super_class.super_class.is_some() {
+            let token = node.super_class.super_class.as_ref().unwrap().token.clone();
+            return Err(ResolverError::SuperClassNotFound(token.lexeme, token.line).into());
+        }
+
+        let callable =
+            ClassInitializationCallable::new(class_ident_string.clone(), methods, super_class);
 
         let pointer = context
             .functions_resolver
             .borrow_mut()
             .add_function(Box::new(callable))?;
+
+        context.set_class_definition(&class_ident_string, pointer);
 
         Ok(Box::new(ClassDeclarationRunnable::new(
             pointer,

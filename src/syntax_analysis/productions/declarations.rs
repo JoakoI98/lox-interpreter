@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use ast_leaf::ast_leaf;
 
 use super::super::parsing::primitives::{
-    Class, Equal, Fun, Identifier, LeftBrace, RightBrace, Semicolon, Var,
+    Class, Equal, Fun, Identifier, LeftBrace, Less, RightBrace, Semicolon, Var,
 };
 use super::super::parsing::{ParseStream, Parser, Result};
 use super::assignments::Expression;
@@ -30,12 +30,33 @@ pub struct FunctionDeclaration {
     pub function: Function,
 }
 
-#[ast_leaf("class" "IDENT" "{" (functions)* "}")]
+#[derive(Debug, PartialEq, Clone)]
+pub struct SuperClassIdentifier {
+    pub super_class: Option<Identifier>,
+}
+
+impl Parser for SuperClassIdentifier {
+    fn parse(stream: &mut ParseStream) -> Result<Self> {
+        let mut super_class = None;
+        if stream.peek::<Less>() {
+            stream.parse::<Less>()?;
+            super_class = Some(stream.parse()?);
+        }
+        Ok(Self { super_class })
+    }
+
+    fn peek(_stream: &ParseStream) -> bool {
+        true
+    }
+}
+
+#[ast_leaf("class" "IDENT" super_class "{" (functions)* "}")]
 #[derive(Debug, PartialEq, Clone)]
 pub struct ClassDeclaration {
     #[Type]
     pub token_type: ClassDeclarationType,
     pub functions: Vec<(ClassDeclarationType, Function)>,
+    pub super_class: SuperClassIdentifier,
     #[TokenList]
     pub token_list: Vec<Token>,
 }

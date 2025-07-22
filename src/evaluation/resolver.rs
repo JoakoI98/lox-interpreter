@@ -27,6 +27,9 @@ pub enum ResolverError {
 
     #[error("[line {0}] Error at 'return': Can't return a value from an initializer.")]
     ReturnFromInitializer(usize),
+
+    #[error("[line {1}] Error at '{0}': Super class not found.")]
+    SuperClassNotFound(String, usize),
 }
 
 #[derive(Debug, Default)]

@@ -142,6 +142,8 @@ pub enum RuntimeError {
     ClassAccessorError(#[from] ClassAccessorError),
     #[error("This not in scope")]
     ThisNotInScope,
+    #[error("Super class not found")]
+    SuperClassNotFound,
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
@@ -226,6 +228,13 @@ impl RuntimeValue {
         ty: CallableType,
     ) -> Self {
         RuntimeValue::Callable(Callable::new(pointer, name, scope, ty))
+    }
+
+    pub fn get_class_instance(&self) -> Option<usize> {
+        match self {
+            RuntimeValue::ClassInstance(pointer, _) => Some(*pointer),
+            _ => None,
+        }
     }
 
     pub fn to_bool(&self) -> Result<bool> {

@@ -9,20 +9,49 @@ use crate::evaluation::{
 pub struct ClassInitializationCallable {
     identifier: String,
     methods: Vec<(usize, String)>,
+    super_class: Option<usize>,
 }
 
 impl ClassInitializationCallable {
-    pub fn new(identifier: String, methods: Vec<(usize, String)>) -> Self {
+    pub fn new(
+        identifier: String,
+        methods: Vec<(usize, String)>,
+        super_class: Option<usize>,
+    ) -> Self {
         Self {
             identifier,
             methods,
+            super_class,
         }
     }
 }
 
 impl Evaluable for ClassInitializationCallable {
-    fn eval(&self, state: &RunState) -> Result<RuntimeValue, RuntimeError> {
-        let instance_index = state.initialize_instance(self.identifier.clone())?;
+    fn eval(&self, _: &RunState) -> Result<RuntimeValue, RuntimeError> {
+        Ok(RuntimeValue::Nil)
+    }
+}
+
+impl Callable for ClassInitializationCallable {
+    fn call(
+        &self,
+        arguments: Vec<RuntimeValue>,
+        _: Option<usize>,
+        state: &RunState,
+    ) -> Result<RuntimeValue, RuntimeError> {
+        let super_class = self
+            .super_class
+            .as_ref()
+            .map(|super_class| state.call_function(*super_class, arguments.clone(), None, None))
+            .transpose()?
+            .map(|super_class| super_class.get_class_instance())
+            .flatten();
+
+        if self.super_class.is_some() && super_class.is_none() {
+            return Err(RuntimeError::SuperClassNotFound);
+        }
+
+        let instance_index = state.initialize_instance(self.identifier.clone(), super_class)?;
         for (pointer, method_name) in &self.methods {
             state.set_instance_value(
                 instance_index,
@@ -36,24 +65,11 @@ impl Evaluable for ClassInitializationCallable {
             )?;
         }
 
-        Ok(RuntimeValue::ClassInstance(
-            instance_index,
-            self.identifier.clone(),
-        ))
-    }
-}
-
-impl Callable for ClassInitializationCallable {
-    fn call(
-        &self,
-        arguments: Vec<RuntimeValue>,
-        _: Option<usize>,
-        state: &RunState,
-    ) -> Result<RuntimeValue, RuntimeError> {
-        let value = self.eval(state)?;
+        let value = RuntimeValue::ClassInstance(instance_index, self.identifier.clone());
         match value {
             RuntimeValue::ClassInstance(this_pointer, _) => {
-                let init_callable = state.get_instance_value(this_pointer, INIT_FUNCTION_NAME)?;
+                let init_callable =
+                    state.get_instance_value(this_pointer, INIT_FUNCTION_NAME, Some(1))?;
                 match init_callable {
                     Some(RuntimeValue::Callable(callable)) => {
                         state.call_function(

@@ -5,9 +5,10 @@ use crate::evaluation::{RuntimeError, RuntimeValue};
 const INITIAL_INSTANCE_CAPACITY: usize = 500;
 
 pub type ClassInstance = HashMap<String, RuntimeValue>;
+type SuperClassPointer = Option<usize>;
 
 pub struct InstanceManager {
-    instances: Vec<Option<(String, ClassInstance)>>,
+    instances: Vec<Option<(String, ClassInstance, SuperClassPointer)>>,
     available: LinkedList<usize>,
 }
 
@@ -28,7 +29,11 @@ impl InstanceManager {
         })
     }
 
-    pub fn initialize_instance(&mut self, class_name: String) -> Result<usize, RuntimeError> {
+    pub fn initialize_instance(
+        &mut self,
+        class_name: String,
+        super_class: SuperClassPointer,
+    ) -> Result<usize, RuntimeError> {
         let mut available = self.available.pop_front();
         if available.is_none() {
             let current_capacity = self.instances.len();
@@ -40,7 +45,7 @@ impl InstanceManager {
         }
         let available = available.ok_or(RuntimeError::NotEnoughSpaceToAllocateNewInstance)?;
 
-        self.instances[available] = Some((class_name, ClassInstance::new()));
+        self.instances[available] = Some((class_name, ClassInstance::new(), super_class));
 
         Ok(available)
     }
@@ -49,13 +54,32 @@ impl InstanceManager {
         &self,
         index: usize,
         key: &str,
+        max_depth: Option<usize>,
     ) -> Result<Option<RuntimeValue>, RuntimeError> {
-        self.instances
+        if let Some(max_depth) = max_depth {
+            if max_depth == 0 {
+                return Ok(None);
+            }
+        }
+
+        let current = self
+            .instances
             .get(index)
             .map(|o| o.as_ref())
             .flatten()
             .ok_or(RuntimeError::InstanceNotFound(index))
-            .map(|o| o.1.get(key).cloned())
+            .map(|(_, instance, _)| instance.get(key).cloned());
+        if let Ok(None) = current {
+            if let Some((_, _, super_class)) = self.instances[index].as_ref() {
+                return super_class
+                    .map(|super_class| {
+                        self.get_instance_value(super_class, key, max_depth.map(|d| d - 1))
+                    })
+                    .transpose()
+                    .map(|o| o.flatten());
+            }
+        }
+        current
     }
 
     pub fn set_instance_value(
