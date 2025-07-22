@@ -75,6 +75,16 @@ impl Callable {
             _ => None,
         }
     }
+
+    pub fn map_this_pointer(&self, this_pointer: usize) -> Self {
+        match self.ty {
+            CallableType::Method(_) => Self {
+                ty: CallableType::Method(this_pointer),
+                ..self.clone()
+            },
+            _ => self.clone(),
+        }
+    }
 }
 
 impl PartialEq for Callable {
@@ -234,6 +244,13 @@ impl RuntimeValue {
         match self {
             RuntimeValue::ClassInstance(pointer, _) => Some(*pointer),
             _ => None,
+        }
+    }
+
+    pub fn map_this_pointer(&self, this_pointer: usize) -> Self {
+        match self {
+            RuntimeValue::Callable(c) => RuntimeValue::Callable(c.map_this_pointer(this_pointer)),
+            _ => self.clone(),
         }
     }
 

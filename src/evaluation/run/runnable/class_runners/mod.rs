@@ -33,6 +33,15 @@ impl Evaluable for ClassInitializationCallable {
 }
 
 impl Callable for ClassInitializationCallable {
+    fn arity(&self, state: &RunState) -> Result<usize, RuntimeError> {
+        self.methods
+            .iter()
+            .find(|(_, method_name)| method_name == INIT_FUNCTION_NAME)
+            .map(|(init_pointer, _)| state.function_arity(*init_pointer))
+            .transpose()
+            .map(|a| a.unwrap_or(0))
+    }
+
     fn call(
         &self,
         arguments: Vec<RuntimeValue>,
@@ -42,7 +51,14 @@ impl Callable for ClassInitializationCallable {
         let super_class = self
             .super_class
             .as_ref()
-            .map(|super_class| state.call_function(*super_class, arguments.clone(), None, None))
+            .map(|super_class| {
+                let arity = state.function_arity(*super_class)?;
+                if arity > arguments.len() {
+                    return Err(RuntimeError::ArityMismatch);
+                }
+                let super_class_arguments = arguments.iter().take(arity).cloned().collect();
+                state.call_function(*super_class, super_class_arguments, None, None)
+            })
             .transpose()?
             .map(|super_class| super_class.get_class_instance())
             .flatten();
@@ -66,6 +82,7 @@ impl Callable for ClassInitializationCallable {
         }
 
         let value = RuntimeValue::ClassInstance(instance_index, self.identifier.clone());
+        state.map_this_pointer(instance_index, instance_index)?;
         match value {
             RuntimeValue::ClassInstance(this_pointer, _) => {
                 let init_callable =

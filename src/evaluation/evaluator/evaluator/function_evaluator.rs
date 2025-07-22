@@ -89,6 +89,10 @@ impl FunctionCallable {
 }
 
 impl Callable for FunctionCallable {
+    fn arity(&self, _: &RunState) -> Result<usize, RuntimeError> {
+        Ok(self.parameters.len())
+    }
+
     fn call(
         &self,
         arguments: Vec<RuntimeValue>,

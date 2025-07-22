@@ -106,4 +106,34 @@ impl InstanceManager {
             .ok_or(RuntimeError::InstanceNotFound(index))
             .map(|o| o.0.as_str())
     }
+
+    pub fn map_this_pointer(
+        &mut self,
+        index: usize,
+        this_pointer: usize,
+    ) -> Result<(), RuntimeError> {
+        let (_, _, super_class) = self
+            .instances
+            .get_mut(index)
+            .map(|o| o.as_mut())
+            .flatten()
+            .ok_or(RuntimeError::InstanceNotFound(index))?;
+
+        let mut super_class = *super_class;
+
+        while let Some(some_super_class) = super_class {
+            let (_, instance, inner_super_class) = self
+                .instances
+                .get_mut(some_super_class)
+                .map(|o| o.as_mut())
+                .flatten()
+                .ok_or(RuntimeError::InstanceNotFound(some_super_class))?;
+            instance.iter_mut().for_each(|(_, v)| {
+                *v = v.map_this_pointer(this_pointer);
+            });
+            super_class = inner_super_class.clone();
+        }
+
+        Ok(())
+    }
 }

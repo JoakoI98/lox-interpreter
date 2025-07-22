@@ -92,14 +92,21 @@ impl RunState {
         let pointer = resolver
             .resolve(index)
             .ok_or(RuntimeError::FunctionNotFound)?;
-        // println!("current_scope:\n{:?}", self.get_current_scope());
-        // println!("function_scope:\n{:?}", function_scope);
 
         let restore = self.replace_scopes(function_scope.unwrap_or(self.get_current_scope()));
         let result: Result<RuntimeValue, RuntimeError> =
             pointer.call(arguments, this_pointer, self);
         restore();
         result
+    }
+
+    pub fn function_arity(&self, index: usize) -> Result<usize, RuntimeError> {
+        let resolver = self.functions_resolver.borrow();
+        let pointer = resolver
+            .resolve(index)
+            .ok_or(RuntimeError::FunctionNotFound)?;
+
+        pointer.arity(self)
     }
 
     pub fn replace_scopes(&self, scopes: RunScopeRef) -> impl FnOnce() + use<'_> {
@@ -144,6 +151,12 @@ impl RunState {
         self.instance_manager
             .borrow_mut()
             .set_instance_value(index, key, value)
+    }
+
+    pub fn map_this_pointer(&self, index: usize, this_pointer: usize) -> Result<(), RuntimeError> {
+        self.instance_manager
+            .borrow_mut()
+            .map_this_pointer(index, this_pointer)
     }
 
     pub fn set_this(&self, this: usize) {
