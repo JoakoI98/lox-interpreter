@@ -24,6 +24,7 @@ impl RunnableBuilder {
         node: &Function,
         context: &BuilderContext,
         is_method: bool,
+        super_available: bool,
     ) -> Result<(usize, String)> {
         let function_ast = node;
         let parameters = &function_ast.parameters.parameters;
@@ -47,12 +48,12 @@ impl RunnableBuilder {
             context
                 .resolver
                 .borrow_mut()
-                .enter_method(function_ident_string.clone());
+                .enter_method(function_ident_string.clone(), super_available);
         } else {
             context
                 .resolver
                 .borrow_mut()
-                .enter_function(function_ident_string.clone());
+                .enter_function(function_ident_string.clone(), super_available);
         }
         for parameter in parameters {
             context
@@ -144,8 +145,9 @@ impl VisitorWithContext<&FunctionDeclaration, Result<Box<dyn Runnable>>, Builder
         node: &FunctionDeclaration,
         context: &BuilderContext,
     ) -> Result<Box<dyn Runnable>> {
+        let super_available = context.resolver.borrow().is_super_available();
         let (pointer, function_ident_string) =
-            Self::declare_function(&node.function, context, false)?;
+            Self::declare_function(&node.function, context, false, super_available)?;
         Ok(Box::new(FunctionDeclarationRunnable::new(
             pointer,
             function_ident_string,
@@ -176,7 +178,14 @@ impl VisitorWithContext<&ClassDeclaration, Result<Box<dyn Runnable>>, BuilderCon
         let methods = node
             .functions
             .iter()
-            .map(|(_, function)| Self::declare_function(function, context, true))
+            .map(|(_, function)| {
+                Self::declare_function(
+                    function,
+                    context,
+                    true,
+                    node.super_class.super_class.is_some(),
+                )
+            })
             .collect::<Result<Vec<(usize, String)>>>()?;
         context.resolver.borrow_mut().exit_class();
 

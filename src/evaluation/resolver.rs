@@ -28,11 +28,11 @@ pub enum ResolverError {
     #[error("[line {0}] Error at 'return': Can't return a value from an initializer.")]
     ReturnFromInitializer(usize),
 
-    #[error("[line {1}] Error at '{0}': Super class not found.")]
-    SuperClassNotFound(String, usize),
-
     #[error("[line {1}] Error at '{0}': A class can't inherit from itself.")]
     InheritFromItself(String, usize),
+
+    #[error("[line {0}] Error at 'super': Can't use 'super' in a class with no superclass.")]
+    SuperNotAvailable(usize),
 }
 
 #[derive(Debug, Default)]
@@ -40,7 +40,7 @@ pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
     function_depth: usize,
     class_depth: usize,
-    method_stack: std::collections::LinkedList<String>,
+    method_stack: std::collections::LinkedList<(String, bool)>,
 }
 
 const INITIAL_SCOPE_CAPACITY: usize = 50;
@@ -140,8 +140,8 @@ impl Resolver {
         Ok(None)
     }
 
-    pub fn enter_function(&mut self, name: String) {
-        self.method_stack.push_back(name);
+    pub fn enter_function(&mut self, name: String, super_available: bool) {
+        self.method_stack.push_back((name, super_available));
         self.function_depth += 1;
     }
 
@@ -166,12 +166,19 @@ impl Resolver {
         self.class_depth > 0
     }
 
-    pub fn enter_method(&mut self, name: String) {
-        self.method_stack.push_back(name);
+    pub fn enter_method(&mut self, name: String, super_available: bool) {
+        self.method_stack.push_back((name, super_available));
         self.function_depth += 1;
     }
 
     pub fn is_in_method(&self) -> Option<String> {
-        self.method_stack.back().cloned()
+        self.method_stack.back().map(|(name, _)| name).cloned()
+    }
+
+    pub fn is_super_available(&self) -> bool {
+        self.method_stack
+            .back()
+            .map(|(_, super_available)| *super_available)
+            .unwrap_or(false)
     }
 }

@@ -62,6 +62,9 @@ impl VisitorWithContext<&PrimaryExpression, Result<Box<dyn Evaluable>>, BuilderC
                 if !context.resolver.borrow().is_in_class() {
                     return Err(ResolverError::ThisOutsideClass(identifier.token.line).into());
                 }
+                if !context.resolver.borrow().is_super_available() {
+                    return Err(ResolverError::SuperNotAvailable(identifier.token.line).into());
+                }
                 Ok(Box::new(PrimaryEvaluator::Super(identifier.token.clone())))
             }
         }

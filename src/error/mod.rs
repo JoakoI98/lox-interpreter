@@ -35,9 +35,6 @@ impl InterpreterError {
         match self {
             InterpreterError::Scanner(_) => 65,
             InterpreterError::Parse(_) => 65,
-            InterpreterError::Runtime(RuntimeError::ResolverError(
-                ResolverError::SuperClassNotFound(_, _),
-            )) => 70,
             InterpreterError::Runtime(RuntimeError::ResolverError(_)) => 65,
             InterpreterError::Runtime(_) => 70,
             InterpreterError::Io { .. } => 1,
