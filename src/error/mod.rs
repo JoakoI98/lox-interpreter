@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 // Import the module-specific errors from their public exports
-use crate::evaluation::RuntimeError;
+use crate::evaluation::{ResolverError, RuntimeError};
 use crate::syntax_analysis::ParseError;
 use crate::tokenizer::ScannerError;
 
@@ -35,6 +35,9 @@ impl InterpreterError {
         match self {
             InterpreterError::Scanner(_) => 65,
             InterpreterError::Parse(_) => 65,
+            InterpreterError::Runtime(RuntimeError::ResolverError(
+                ResolverError::SuperClassNotFound(_, _),
+            )) => 70,
             InterpreterError::Runtime(RuntimeError::ResolverError(_)) => 65,
             InterpreterError::Runtime(_) => 70,
             InterpreterError::Io { .. } => 1,

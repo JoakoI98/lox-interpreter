@@ -1,7 +1,7 @@
 use super::super::run_state::RunState;
-use crate::evaluation::evaluator::Evaluable;
+use crate::evaluation::evaluator::{Evaluable, PrimaryEvaluator};
 use crate::evaluation::runtime_value::{CallableType, Result as RuntimeResult};
-use crate::evaluation::RuntimeValue;
+use crate::evaluation::{RuntimeError, RuntimeValue};
 
 pub type RunResult = RuntimeResult<Option<RuntimeValue>>;
 
@@ -115,5 +115,27 @@ impl Runnable for ReturnRunnable {
     fn run(&self, state: &RunState) -> RunResult {
         let ret = self.expr.as_ref().map(|e| e.eval(state)).transpose()?;
         return Ok(Some(ret.unwrap_or(RuntimeValue::Nil)));
+    }
+}
+
+#[derive(Debug)]
+pub struct IfNoClassErrorRunnable {
+    evaluatable: PrimaryEvaluator,
+    line: usize,
+}
+
+impl IfNoClassErrorRunnable {
+    pub fn new(evaluatable: PrimaryEvaluator, line: usize) -> Self {
+        Self { evaluatable, line }
+    }
+}
+
+impl Runnable for IfNoClassErrorRunnable {
+    fn run(&self, state: &RunState) -> RunResult {
+        let ret = self.evaluatable.eval(state)?;
+        if let RuntimeValue::ClassInstance(_, _) = ret {
+            return Ok(None);
+        }
+        return Err(RuntimeError::SuperClassMustBeAClass(self.line));
     }
 }

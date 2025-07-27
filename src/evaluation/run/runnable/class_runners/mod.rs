@@ -1,5 +1,5 @@
 use crate::evaluation::{
-    evaluator::{Evaluable, INIT_FUNCTION_NAME},
+    evaluator::{Evaluable, PrimaryEvaluator, INIT_FUNCTION_NAME},
     run::{Callable, Runnable},
     runtime_value::{CallableType, ThisInstance},
     RunState, RuntimeError, RuntimeValue,
@@ -110,19 +110,37 @@ impl Callable for ClassInitializationCallable {
 pub struct ClassDeclarationRunnable {
     class_constructor_pointer: usize,
     identifier: String,
+    super_class_evaluable: Option<(PrimaryEvaluator, usize)>,
 }
 
 impl ClassDeclarationRunnable {
-    pub fn new(class_constructor_pointer: usize, identifier: String) -> Self {
+    pub fn new(
+        class_constructor_pointer: usize,
+        identifier: String,
+        super_class_evaluable: Option<(PrimaryEvaluator, usize)>,
+    ) -> Self {
         Self {
             class_constructor_pointer,
             identifier,
+            super_class_evaluable,
         }
     }
 }
 
 impl Runnable for ClassDeclarationRunnable {
     fn run(&self, state: &RunState) -> Result<Option<RuntimeValue>, RuntimeError> {
+        if let Some((evaluator, line)) = &self.super_class_evaluable {
+            let super_class = evaluator.eval(state)?;
+            match super_class {
+                RuntimeValue::Callable(callable) => {
+                    if !callable.is_class_constructor() {
+                        return Err(RuntimeError::SuperClassMustBeAClass(*line));
+                    }
+                }
+                _ => return Err(RuntimeError::SuperClassMustBeAClass(*line)),
+            }
+        }
+
         state.declare_variable(
             self.identifier.clone(),
             Some(RuntimeValue::callable(

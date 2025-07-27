@@ -118,6 +118,13 @@ impl Callable {
             _ => return,
         };
     }
+
+    pub fn is_class_constructor(&self) -> bool {
+        match &self.ty {
+            CallableType::ClassConstructor => true,
+            _ => false,
+        }
+    }
 }
 
 impl PartialEq for Callable {
@@ -187,6 +194,8 @@ pub enum RuntimeError {
     ThisNotInScope,
     #[error("Super class not found")]
     SuperClassNotFound,
+    #[error("Superclass must be a class.\n[line {0}]")]
+    SuperClassMustBeAClass(usize),
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;

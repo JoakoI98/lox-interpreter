@@ -30,6 +30,9 @@ pub enum ResolverError {
 
     #[error("[line {1}] Error at '{0}': Super class not found.")]
     SuperClassNotFound(String, usize),
+
+    #[error("[line {1}] Error at '{0}': A class can't inherit from itself.")]
+    InheritFromItself(String, usize),
 }
 
 #[derive(Debug, Default)]

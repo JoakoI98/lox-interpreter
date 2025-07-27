@@ -1,7 +1,11 @@
 use crate::common::{Visitable, VisitorWithContext};
-use crate::evaluation::evaluator::{AssignmentEvaluatorBuilder, FunctionCallable};
+use crate::evaluation::evaluator::{
+    AssignmentEvaluatorBuilder, FunctionCallable, PrimaryEvaluator,
+};
 use crate::evaluation::resolver::ResolverError;
-use crate::evaluation::run::runnable::{ClassDeclarationRunnable, ClassInitializationCallable};
+use crate::evaluation::run::runnable::{
+    ClassDeclarationRunnable, ClassInitializationCallable, IfNoClassErrorRunnable,
+};
 use crate::evaluation::run::runnable::{
     FunctionDeclarationRunnable, Runnable, VarDeclarationRunnable,
 };
@@ -176,6 +180,16 @@ impl VisitorWithContext<&ClassDeclaration, Result<Box<dyn Runnable>>, BuilderCon
             .collect::<Result<Vec<(usize, String)>>>()?;
         context.resolver.borrow_mut().exit_class();
 
+        if let Some(super_class) = &node.super_class.super_class {
+            if super_class.token.lexeme == class_ident_string {
+                return Err(ResolverError::InheritFromItself(
+                    super_class.token.lexeme.clone(),
+                    super_class.token.line,
+                )
+                .into());
+            }
+        }
+
         let super_class = node
             .super_class
             .super_class
@@ -183,8 +197,13 @@ impl VisitorWithContext<&ClassDeclaration, Result<Box<dyn Runnable>>, BuilderCon
             .map(|super_class| context.get_class_definition(&super_class.token.lexeme))
             .flatten();
         if super_class.is_none() && node.super_class.super_class.is_some() {
-            let token = node.super_class.super_class.as_ref().unwrap().token.clone();
-            return Err(ResolverError::SuperClassNotFound(token.lexeme, token.line).into());
+            let token_ref = &node.super_class.super_class.as_ref().unwrap().token;
+            let primary_evaluator =
+                PrimaryEvaluator::from_raw_token(token_ref, &context.resolver.borrow())?;
+            return Ok(Box::new(IfNoClassErrorRunnable::new(
+                primary_evaluator,
+                token_ref.line,
+            )));
         }
 
         let callable =
@@ -197,9 +216,21 @@ impl VisitorWithContext<&ClassDeclaration, Result<Box<dyn Runnable>>, BuilderCon
 
         context.set_class_definition(&class_ident_string, pointer);
 
+        let super_class_option = node
+            .super_class
+            .super_class
+            .as_ref()
+            .map::<Result<(PrimaryEvaluator, usize)>, _>(|ident| {
+                let evaluator =
+                    PrimaryEvaluator::from_raw_token(&ident.token, &context.resolver.borrow())?;
+                Ok((evaluator, ident.token.line))
+            })
+            .transpose()?;
+
         Ok(Box::new(ClassDeclarationRunnable::new(
             pointer,
             class_ident_string,
+            super_class_option,
         )))
     }
 }

@@ -7,6 +7,7 @@ mod runtime_value;
 use std::{cell::RefCell, collections::HashMap};
 
 pub use evaluator::AssignmentEvaluatorBuilder;
+pub use resolver::ResolverError;
 pub use run::{Program, RunState};
 pub use runtime_value::{RuntimeError, RuntimeValue};
 
