@@ -12,6 +12,7 @@ pub enum PrimaryEvaluator {
     Identifier(EvaluableIdentifier),
     Nil,
     This,
+    Super(Token),
 }
 
 impl PrimaryEvaluator {
@@ -32,8 +33,27 @@ impl Evaluable for PrimaryEvaluator {
             PrimaryEvaluator::Identifier(identifier) => run_state.evaluate_variable(identifier),
             PrimaryEvaluator::This => {
                 let pointer = run_state.get_this().ok_or(RuntimeError::ThisNotInScope)?;
-                let class_name = run_state.get_class_name(pointer)?;
-                Ok(RuntimeValue::ClassInstance(pointer, class_name))
+                let class_name = run_state.get_class_name(pointer.get_current())?;
+                Ok(RuntimeValue::ClassInstance(
+                    pointer.get_current(),
+                    class_name,
+                ))
+            }
+            PrimaryEvaluator::Super(identifier) => {
+                let pointer = run_state.get_this().ok_or(RuntimeError::ThisNotInScope)?;
+                return run_state
+                    .get_instance_value(
+                        pointer.get_super_class(),
+                        &identifier.lexeme,
+                        None,
+                        Some(1),
+                    )
+                    .and_then(|o| {
+                        o.ok_or(RuntimeError::UndefinedProperty(
+                            identifier.lexeme.clone(),
+                            identifier.line,
+                        ))
+                    });
             }
         }
     }

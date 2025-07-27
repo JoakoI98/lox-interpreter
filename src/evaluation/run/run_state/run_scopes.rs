@@ -1,10 +1,12 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::evaluation::{evaluator::EvaluableIdentifier, RuntimeError, RuntimeValue};
+use crate::evaluation::{
+    evaluator::EvaluableIdentifier, runtime_value::ThisInstance, RuntimeError, RuntimeValue,
+};
 
 pub struct RunScopes {
     values: HashMap<String, RuntimeValue>,
-    this: Option<usize>,
+    this: Option<ThisInstance>,
     enclosing: Option<RunScopeRef>,
 }
 
@@ -108,12 +110,12 @@ impl RunScopes {
         0
     }
 
-    pub fn set_this(&mut self, this: usize) {
+    pub fn set_this(&mut self, this: ThisInstance) {
         self.this = Some(this);
     }
 
-    pub fn get_this(&self) -> Option<usize> {
-        let mut this = self.this;
+    pub fn get_this(&self) -> Option<ThisInstance> {
+        let mut this = self.this.clone();
         if this.is_none() {
             if let Some(enclosing) = &self.enclosing {
                 this = enclosing.borrow().get_this();

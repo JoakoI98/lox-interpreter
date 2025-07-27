@@ -1,7 +1,7 @@
 use crate::evaluation::{
     evaluator::{Evaluable, INIT_FUNCTION_NAME},
     run::{Callable, Runnable},
-    runtime_value::CallableType,
+    runtime_value::{CallableType, ThisInstance},
     RunState, RuntimeError, RuntimeValue,
 };
 
@@ -45,7 +45,7 @@ impl Callable for ClassInitializationCallable {
     fn call(
         &self,
         arguments: Vec<RuntimeValue>,
-        _: Option<usize>,
+        _: Option<ThisInstance>,
         state: &RunState,
     ) -> Result<RuntimeValue, RuntimeError> {
         let super_class = self
@@ -76,7 +76,7 @@ impl Callable for ClassInitializationCallable {
                     *pointer,
                     method_name.clone(),
                     None,
-                    CallableType::Method(instance_index),
+                    CallableType::Method(ThisInstance::current(instance_index)),
                 ),
             )?;
         }
@@ -86,14 +86,14 @@ impl Callable for ClassInitializationCallable {
         match value {
             RuntimeValue::ClassInstance(this_pointer, _) => {
                 let init_callable =
-                    state.get_instance_value(this_pointer, INIT_FUNCTION_NAME, Some(1))?;
+                    state.get_instance_value(this_pointer, INIT_FUNCTION_NAME, None, None)?;
                 match init_callable {
                     Some(RuntimeValue::Callable(callable)) => {
                         state.call_function(
                             callable.get_pointer(),
                             arguments,
                             None,
-                            Some(this_pointer),
+                            Some(ThisInstance::current(this_pointer)),
                         )?;
                     }
                     _ => {}

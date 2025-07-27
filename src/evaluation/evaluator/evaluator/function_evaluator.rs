@@ -3,6 +3,7 @@ use thiserror::Error;
 use crate::evaluation::{
     evaluator::Evaluable,
     run::{Callable, Runnable},
+    runtime_value::ThisInstance,
     RunState, RuntimeError, RuntimeValue,
 };
 
@@ -96,7 +97,7 @@ impl Callable for FunctionCallable {
     fn call(
         &self,
         arguments: Vec<RuntimeValue>,
-        this_pointer: Option<usize>,
+        this_pointer: Option<ThisInstance>,
         state: &RunState,
     ) -> Result<RuntimeValue, RuntimeError> {
         if arguments.len() != self.parameters.len() {
@@ -104,15 +105,20 @@ impl Callable for FunctionCallable {
         }
 
         state.enter_scope()?;
-        if let Some(this_pointer) = this_pointer {
-            state.set_this(this_pointer);
+        if let Some(this_pointer) = &this_pointer {
+            state.set_this(this_pointer.clone());
         }
         self.define_arguments(arguments, state)?;
         let result = self.eval(state)?;
         state.exit_scope()?;
-        if self.name == INIT_FUNCTION_NAME && this_pointer.is_some() {
-            let class = state.get_class_name(this_pointer.unwrap())?;
-            return Ok(RuntimeValue::ClassInstance(this_pointer.unwrap(), class));
+        if self.name == INIT_FUNCTION_NAME {
+            if let Some(this_pointer) = &this_pointer {
+                let class = state.get_class_name(this_pointer.get_current())?;
+                return Ok(RuntimeValue::ClassInstance(
+                    this_pointer.get_current(),
+                    class,
+                ));
+            }
         }
         Ok(result)
     }

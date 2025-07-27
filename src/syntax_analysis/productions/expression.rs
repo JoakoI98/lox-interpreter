@@ -12,18 +12,19 @@ use super::super::parsing::{
 use super::assignments::Expression;
 use super::functions::Call;
 
+use crate::syntax_analysis::parsing::primitives::{Dot, Super};
 use crate::tokenizer::Token;
 
 #[ast_leaf(( "IDENT" |"NUMBER" | "STRING" | "true" | "false" | "this" | "nil" | 1: "(" Expression ")" ))]
 #[derive(Debug, PartialEq, Clone)]
-pub struct PrimaryExpression {
+pub struct PrimaryWithoutSuperExpression {
     #[Type]
     pub token_type: PrimaryExpressionType,
     #[TokenList]
     pub token_list: Vec<Token>,
 }
 
-impl Display for PrimaryExpression {
+impl Display for PrimaryWithoutSuperExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.token_type {
             PrimaryExpressionType::Expression(expr) => write!(f, "(group {})", expr),
@@ -31,6 +32,44 @@ impl Display for PrimaryExpression {
                 let token = self.token_list.first().ok_or(std::fmt::Error)?;
                 write!(f, "{}", token)
             }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum PrimaryExpression {
+    PrimaryWithoutSuperExpression(PrimaryWithoutSuperExpression),
+    Super(Identifier),
+}
+
+impl Parser for PrimaryExpression {
+    fn parse(input: &mut ParseStream) -> Result<Self> {
+        if input.peek::<Super>() {
+            input.parse::<Super>()?;
+            input.parse::<Dot>()?;
+            let identifier = input.parse::<Identifier>()?;
+            Ok(PrimaryExpression::Super(identifier))
+        } else {
+            let primary_without_super_expression =
+                input.parse::<PrimaryWithoutSuperExpression>()?;
+            Ok(PrimaryExpression::PrimaryWithoutSuperExpression(
+                primary_without_super_expression,
+            ))
+        }
+    }
+
+    fn peek(input: &ParseStream) -> bool {
+        input.peek::<Super>() || input.peek::<PrimaryWithoutSuperExpression>()
+    }
+}
+
+impl crate::common::Visitable for PrimaryExpression {}
+
+impl Display for PrimaryExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PrimaryExpression::PrimaryWithoutSuperExpression(expr) => write!(f, "{}", expr),
+            PrimaryExpression::Super(identifier) => write!(f, "super.{}", identifier.token.lexeme),
         }
     }
 }

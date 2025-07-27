@@ -33,7 +33,7 @@ impl Evaluable for ClassAccessorEvaluator {
             _ => return Err(ClassAccessorError::Unaccessible(to_access).into()),
         };
         state
-            .get_instance_value(class_instance_pointer, &self.to_get, None)
+            .get_instance_value(class_instance_pointer, &self.to_get, None, None)
             .and_then(|o| {
                 o.ok_or(RuntimeError::UndefinedProperty(
                     self.to_get.clone(),

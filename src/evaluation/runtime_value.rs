@@ -11,11 +11,45 @@ use crate::evaluation::{
     run::{NativeFunctionError, RunScopeRef},
 };
 
+#[derive(Clone, Debug)]
+pub enum ThisInstance {
+    Current(usize),
+    WithSuper { current: usize, super_class: usize },
+}
+
+impl ThisInstance {
+    pub fn get_current(&self) -> usize {
+        match self {
+            ThisInstance::Current(pointer) => *pointer,
+            ThisInstance::WithSuper { current, .. } => *current,
+        }
+    }
+
+    pub fn get_super_class(&self) -> usize {
+        match self {
+            ThisInstance::WithSuper { super_class, .. } => *super_class,
+            ThisInstance::Current(pointer) => *pointer,
+        }
+    }
+
+    pub fn current(pointer: usize) -> Self {
+        ThisInstance::Current(pointer)
+    }
+
+    pub fn remap_to_super(self, current: usize) -> Self {
+        let actual_current = self.get_current();
+        return Self::WithSuper {
+            current: current,
+            super_class: actual_current,
+        };
+    }
+}
+
 #[derive(Clone)]
 pub enum CallableType {
     Function,
     ClassConstructor,
-    Method(usize),
+    Method(ThisInstance),
 }
 
 #[derive(Clone)]
@@ -69,21 +103,20 @@ impl Callable {
         self.pointer
     }
 
-    pub fn get_this_pointer(&self) -> Option<usize> {
-        match self.ty {
-            CallableType::Method(pointer) => Some(pointer),
+    pub fn get_this_pointer(&self) -> Option<ThisInstance> {
+        match &self.ty {
+            CallableType::Method(pointer) => Some(pointer.clone()),
             _ => None,
         }
     }
 
-    pub fn map_this_pointer(&self, this_pointer: usize) -> Self {
-        match self.ty {
-            CallableType::Method(_) => Self {
-                ty: CallableType::Method(this_pointer),
-                ..self.clone()
-            },
-            _ => self.clone(),
-        }
+    pub fn map_this_pointer(&mut self, this_pointer: usize) -> () {
+        self.ty = match &self.ty {
+            CallableType::Method(instance) => {
+                CallableType::Method(instance.clone().remap_to_super(this_pointer))
+            }
+            _ => return,
+        };
     }
 }
 
@@ -247,10 +280,10 @@ impl RuntimeValue {
         }
     }
 
-    pub fn map_this_pointer(&self, this_pointer: usize) -> Self {
+    pub fn map_this_pointer(&mut self, this_pointer: usize) -> () {
         match self {
-            RuntimeValue::Callable(c) => RuntimeValue::Callable(c.map_this_pointer(this_pointer)),
-            _ => self.clone(),
+            RuntimeValue::Callable(c) => c.map_this_pointer(this_pointer),
+            _ => (),
         }
     }
 

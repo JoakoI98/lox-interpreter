@@ -4,6 +4,7 @@ use crate::evaluation::{
     evaluator::EvaluableIdentifier,
     functions_resolver::FunctionsResolver,
     run::{run_state::InstanceManager, RunScopeRef, RunScopes},
+    runtime_value::ThisInstance,
     RuntimeError, RuntimeValue,
 };
 
@@ -86,7 +87,7 @@ impl RunState {
         index: usize,
         arguments: Vec<RuntimeValue>,
         function_scope: Option<RunScopeRef>,
-        this_pointer: Option<usize>,
+        this_pointer: Option<ThisInstance>,
     ) -> Result<RuntimeValue, RuntimeError> {
         let resolver = self.functions_resolver.borrow();
         let pointer = resolver
@@ -136,10 +137,11 @@ impl RunState {
         index: usize,
         key: &str,
         max_depth: Option<usize>,
+        min_depth: Option<usize>,
     ) -> Result<Option<RuntimeValue>, RuntimeError> {
         self.instance_manager
             .borrow()
-            .get_instance_value(index, key, max_depth)
+            .get_instance_value(index, key, max_depth, min_depth)
     }
 
     pub fn set_instance_value(
@@ -159,11 +161,11 @@ impl RunState {
             .map_this_pointer(index, this_pointer)
     }
 
-    pub fn set_this(&self, this: usize) {
+    pub fn set_this(&self, this: ThisInstance) {
         self.scopes.borrow().borrow_mut().set_this(this);
     }
 
-    pub fn get_this(&self) -> Option<usize> {
+    pub fn get_this(&self) -> Option<ThisInstance> {
         self.scopes.borrow().borrow().get_this()
     }
 

@@ -1,4 +1,6 @@
-use crate::evaluation::{evaluator::Evaluable, RunState, RuntimeError, RuntimeValue};
+use crate::evaluation::{
+    evaluator::Evaluable, runtime_value::ThisInstance, RunState, RuntimeError, RuntimeValue,
+};
 
 pub trait Callable: Evaluable {
     fn arity(&self, state: &RunState) -> Result<usize, RuntimeError>;
@@ -6,7 +8,7 @@ pub trait Callable: Evaluable {
     fn call(
         &self,
         arguments: Vec<RuntimeValue>,
-        this_pointer: Option<usize>,
+        this_pointer: Option<ThisInstance>,
         state: &RunState,
     ) -> Result<RuntimeValue, RuntimeError>;
 }

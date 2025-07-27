@@ -22,35 +22,48 @@ impl VisitorWithContext<&PrimaryExpression, Result<Box<dyn Evaluable>>, BuilderC
         node: &PrimaryExpression,
         context: &BuilderContext,
     ) -> Result<Box<dyn Evaluable>> {
-        let token = node
-            .token_list
-            .first()
-            .ok_or(RuntimeError::ASTInvalidStructure)?;
-        match &node.token_type {
-            PrimaryExpressionType::True => Ok(Box::new(PrimaryEvaluator::Boolean(true))),
-            PrimaryExpressionType::This => {
-                if !context.resolver.borrow().is_in_class() {
-                    return Err(ResolverError::ThisOutsideClass(token.line).into());
+        match node {
+            PrimaryExpression::PrimaryWithoutSuperExpression(node) => {
+                let token = node
+                    .token_list
+                    .first()
+                    .ok_or(RuntimeError::ASTInvalidStructure)?;
+                match &node.token_type {
+                    PrimaryExpressionType::True => Ok(Box::new(PrimaryEvaluator::Boolean(true))),
+                    PrimaryExpressionType::This => {
+                        if !context.resolver.borrow().is_in_class() {
+                            return Err(ResolverError::ThisOutsideClass(token.line).into());
+                        }
+                        Ok(Box::new(PrimaryEvaluator::This))
+                    }
+                    PrimaryExpressionType::False => Ok(Box::new(PrimaryEvaluator::Boolean(false))),
+                    PrimaryExpressionType::Nil => Ok(Box::new(PrimaryEvaluator::Nil)),
+                    PrimaryExpressionType::Number
+                    | PrimaryExpressionType::String
+                    | PrimaryExpressionType::Identifier => match &token.token_value {
+                        TokenValue::Number(value) => {
+                            Ok(Box::new(PrimaryEvaluator::Number(value.clone())))
+                        }
+                        TokenValue::String(value) => {
+                            Ok(Box::new(PrimaryEvaluator::String(value.clone())))
+                        }
+                        TokenValue::Identifier(_) => Ok(Box::new(
+                            PrimaryEvaluator::from_raw_token(token, &context.resolver.borrow())?,
+                        )),
+                        _ => Err(RuntimeError::ASTInvalidStructure),
+                    },
+                    PrimaryExpressionType::Expression(expr) => {
+                        expr.accept_with_context(&AssignmentEvaluatorBuilder, context)
+                    }
+                    PrimaryExpressionType::None => Err(RuntimeError::ASTInvalidStructure),
                 }
-                Ok(Box::new(PrimaryEvaluator::This))
             }
-            PrimaryExpressionType::False => Ok(Box::new(PrimaryEvaluator::Boolean(false))),
-            PrimaryExpressionType::Nil => Ok(Box::new(PrimaryEvaluator::Nil)),
-            PrimaryExpressionType::Number
-            | PrimaryExpressionType::String
-            | PrimaryExpressionType::Identifier => match &token.token_value {
-                TokenValue::Number(value) => Ok(Box::new(PrimaryEvaluator::Number(value.clone()))),
-                TokenValue::String(value) => Ok(Box::new(PrimaryEvaluator::String(value.clone()))),
-                TokenValue::Identifier(_) => Ok(Box::new(PrimaryEvaluator::from_raw_token(
-                    token,
-                    &context.resolver.borrow(),
-                )?)),
-                _ => Err(RuntimeError::ASTInvalidStructure),
-            },
-            PrimaryExpressionType::Expression(expr) => {
-                expr.accept_with_context(&AssignmentEvaluatorBuilder, context)
+            PrimaryExpression::Super(identifier) => {
+                if !context.resolver.borrow().is_in_class() {
+                    return Err(ResolverError::ThisOutsideClass(identifier.token.line).into());
+                }
+                Ok(Box::new(PrimaryEvaluator::Super(identifier.token.clone())))
             }
-            PrimaryExpressionType::None => Err(RuntimeError::ASTInvalidStructure),
         }
     }
 }

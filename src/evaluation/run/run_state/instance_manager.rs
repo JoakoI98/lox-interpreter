@@ -55,9 +55,28 @@ impl InstanceManager {
         index: usize,
         key: &str,
         max_depth: Option<usize>,
+        min_depth: Option<usize>,
     ) -> Result<Option<RuntimeValue>, RuntimeError> {
         if let Some(max_depth) = max_depth {
             if max_depth == 0 {
+                return Ok(None);
+            }
+        }
+
+        if let Some(min_depth) = min_depth {
+            if min_depth > 0 {
+                let super_class = self.instances[index]
+                    .as_ref()
+                    .map(|(_, _, super_class)| super_class.as_ref().cloned())
+                    .flatten();
+                if let Some(super_class) = super_class {
+                    return self.get_instance_value(
+                        super_class,
+                        key,
+                        max_depth,
+                        Some(min_depth - 1),
+                    );
+                }
                 return Ok(None);
             }
         }
@@ -73,7 +92,12 @@ impl InstanceManager {
             if let Some((_, _, super_class)) = self.instances[index].as_ref() {
                 return super_class
                     .map(|super_class| {
-                        self.get_instance_value(super_class, key, max_depth.map(|d| d - 1))
+                        self.get_instance_value(
+                            super_class,
+                            key,
+                            max_depth.map(|d| d - 1),
+                            min_depth,
+                        )
                     })
                     .transpose()
                     .map(|o| o.flatten());
@@ -129,7 +153,7 @@ impl InstanceManager {
                 .flatten()
                 .ok_or(RuntimeError::InstanceNotFound(some_super_class))?;
             instance.iter_mut().for_each(|(_, v)| {
-                *v = v.map_this_pointer(this_pointer);
+                v.map_this_pointer(this_pointer);
             });
             super_class = inner_super_class.clone();
         }

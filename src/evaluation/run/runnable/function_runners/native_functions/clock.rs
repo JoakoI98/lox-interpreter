@@ -2,7 +2,8 @@ use super::NativeFunctionError;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::evaluation::{
-    evaluator::Evaluable, run::Callable, RunState, RuntimeError, RuntimeValue,
+    evaluator::Evaluable, run::Callable, runtime_value::ThisInstance, RunState, RuntimeError,
+    RuntimeValue,
 };
 
 #[derive(Debug)]
@@ -16,7 +17,7 @@ impl Callable for ClockNativeFunction {
     fn call(
         &self,
         _arguments: Vec<RuntimeValue>,
-        _this_pointer: Option<usize>,
+        _this_pointer: Option<ThisInstance>,
         state: &RunState,
     ) -> Result<RuntimeValue, RuntimeError> {
         self.eval(state)
